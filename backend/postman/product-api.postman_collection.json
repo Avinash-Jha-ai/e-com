@@ -1,0 +1,150 @@
+{
+  "info": {
+    "name": "E-Commerce Product API",
+    "description": "Import this collection in Postman. Login first so Postman stores the token cookie for protected requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api"
+    },
+    {
+      "key": "productId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Shopkeeper Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"shopkeeper@example.com\",\n  \"password\": \"Password@123\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/login/shopkeeper"
+      }
+    },
+    {
+      "name": "2. Create Product",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Wireless Bluetooth Headphones\",\n  \"description\": \"Comfortable wireless headphones with clear sound and long battery life.\",\n  \"shortDescription\": \"Wireless over-ear headphones\",\n  \"brand\": \"SoundMax\",\n  \"department\": \"electronics\",\n  \"category\": \"Headphones\",\n  \"subCategory\": \"Wireless Headphones\",\n  \"collections\": [\"Featured Electronics\"],\n  \"tags\": [\"headphones\", \"bluetooth\", \"wireless\"],\n  \"price\": 2499,\n  \"salePrice\": 1999,\n  \"sku\": \"SM-WH-001\",\n  \"stock\": 25,\n  \"images\": [\n    {\n      \"url\": \"https://example.com/headphones.jpg\",\n      \"altText\": \"Black wireless headphones\",\n      \"isPrimary\": true\n    }\n  ],\n  \"specifications\": [\n    { \"name\": \"Colour\", \"value\": \"Black\" },\n    { \"name\": \"Connectivity\", \"value\": \"Bluetooth\" }\n  ],\n  \"freeDelivery\": true,\n  \"cashOnDelivery\": true\n}"
+        },
+        "url": "{{baseUrl}}/products"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const response = pm.response.json();",
+              "if (response.product?._id) pm.collectionVariables.set('productId', response.product._id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Get Products",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/products?department=electronics&page=1&limit=12&sort=newest"
+      }
+    },
+    {
+      "name": "4. Search Products",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/products?search=headphones&minPrice=1000&maxPrice=3000&sort=price-low"
+      }
+    },
+    {
+      "name": "5. Get Product Details",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/products/{{productId}}"
+      }
+    },
+    {
+      "name": "6. Update Product",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"price\": 2299,\n  \"salePrice\": 1899,\n  \"stock\": 20,\n  \"isFeatured\": true\n}"
+        },
+        "url": "{{baseUrl}}/products/{{productId}}"
+      }
+    },
+    {
+      "name": "7. Add Review",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Very comfortable and the sound is clear.\"\n}"
+        },
+        "url": "{{baseUrl}}/products/{{productId}}/review"
+      }
+    },
+    {
+      "name": "8. AI Generate Product Draft",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": "",
+              "description": "Choose a product image in Postman."
+            },
+            {
+              "key": "notes",
+              "value": "Black colour. Please use simple product language.",
+              "type": "text"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/products/ai/generate-details"
+      }
+    },
+    {
+      "name": "9. Delete Product",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/products/{{productId}}"
+      }
+    }
+  ]
+}
