@@ -18,6 +18,7 @@ export const isAuthenticated = (req, res, next) => {
     );
 
     req.userId = decoded.userId;
+    req.userRole = decoded.role;
 
     next();
   } catch (error) {
@@ -26,4 +27,15 @@ export const isAuthenticated = (req, res, next) => {
       message: "Invalid or expired token",
     });
   }
+};
+
+export const authorizeRoles = (...allowedRoles) => (req, res, next) => {
+  if (!allowedRoles.includes(req.userRole)) {
+    return res.status(403).json({
+      success: false,
+      message: "You do not have permission to access this resource",
+    });
+  }
+
+  next();
 };

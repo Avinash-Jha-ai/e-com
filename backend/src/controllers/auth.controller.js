@@ -7,9 +7,42 @@ import redis from "../configs/redis.js";
 import { sendOTP } from "../services/email.service.js";
 import jwt from "jsonwebtoken";
 
+const ROLES = Object.freeze({
+  USER: "user",
+  SHOPKEEPER: "shopkeeper",
+  ADMIN: "admin",
+});
+
+const getRequiredRole = (req) => req.authRole || ROLES.USER;
+
+const registrationKey = (role, email) => `register:${role}:${email}`;
+
+const publicUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  avatar: user.avatar,
+  role: user.role,
+});
+
+const createToken = (user) => jwt.sign(
+  { userId: user._id, role: user.role },
+  configs.JWT_SECRET,
+  { expiresIn: "7d" }
+);
+
+const setAuthCookie = (res, token) => {
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+};
 
 export const register=async (req,res)=>{
     const {name ,email,password} = req.body ?? {};
+    const role = getRequiredRole(req);
 
     if(!name || !email || !password){
 
@@ -47,12 +80,13 @@ export const register=async (req,res)=>{
     const otpHash = await bcrypt.hash(otp, 10);
 
     await redis.set(
-      `register:${normalizedEmail}`,
+      registrationKey(role, normalizedEmail),
       JSON.stringify({
         name,
         email: normalizedEmail,
         password: hashedPassword,
         avatar,
+        role,
         otp: otpHash,
       }),
       "EX",
@@ -83,9 +117,10 @@ export const verifyRegisterOTP =async (req,res)=>{
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const role = getRequiredRole(req);
 
     const data = await redis.get(
-      `register:${normalizedEmail}`
+      registrationKey(role, normalizedEmail)
     );
 
     if (!data) {
@@ -113,50 +148,30 @@ export const verifyRegisterOTP =async (req,res)=>{
       password: registrationData.password,
       avatar: registrationData.avatar,
       isVerify: true,
+      role: registrationData.role,
     });
 
     // Delete OTP
     await redis.del(
-      `register:${normalizedEmail}`
+      registrationKey(role, normalizedEmail)
     );
 
     // Generate JWT
-    const token = jwt.sign(
-      {
-        userId: user._id,
-      },
-      configs.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
-    );
+    const token = createToken(user);
 
-    // Set cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite:
-        process.env.NODE_ENV === "production"
-          ? "none"
-          : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setAuthCookie(res, token);
 
     return res.status(201).json({
       success: true,
       message: "Registration successful",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-      },
+      user: publicUser(user),
     });
 
 }
 
 export const login =async (req,res)=>{
     const { email, password } = req.body ?? {};
+    const role = getRequiredRole(req);
 
     if (!email || !password) {
       return res.status(400).json({
@@ -199,37 +214,22 @@ export const login =async (req,res)=>{
       });
     }
 
-    // Generate JWT
-    const token = jwt.sign(
-      {
-        userId: user._id,
-      },
-      configs.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
-    );
+    if (user.role !== role) {
+      return res.status(403).json({
+        success: false,
+        message: `Please use the ${user.role} login endpoint`,
+      });
+    }
 
-    // Set cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite:
-        process.env.NODE_ENV === "production"
-          ? "none"
-          : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    // Generate JWT
+    const token = createToken(user);
+
+    setAuthCookie(res, token);
 
     return res.status(200).json({
       success: true,
       message: "Login successful",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-      },
+      user: publicUser(user),
     });
 
 }

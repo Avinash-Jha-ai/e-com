@@ -47,6 +47,12 @@ const userSchema = new mongoose.Schema(
         isDefault: { type: Boolean, default: false },
       },
     ],
+    role: {
+      type: String,
+      enum: ["user", "admin", "shopkeeper"],
+      default: "user",
+      immutable: true,
+    },
 
   },
   {

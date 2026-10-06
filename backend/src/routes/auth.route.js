@@ -12,6 +12,7 @@ import {
 } from "../controllers/auth.controller.js";
 
 import { isAuthenticated } from "../middlewares/auth.middleware.js";
+import { configs } from "../configs/config.js";
 
 import upload from "../middlewares/upload.middleware.js";
 import { authLimiter } from "../middlewares/rate-limit.middleware.js";
@@ -26,32 +27,68 @@ import {
 
 const router = express.Router();
 
+const useRole = (role) => (req, res, next) => {
+  req.authRole = role;
+  next();
+};
 
-// Authentication
-router.post(
-  "/register",
+const requireAdminRegistrationSecret = (req, res, next) => {
+  const configuredSecret = configs.ADMIN_REGISTRATION_SECRET;
+  const suppliedSecret = req.get("x-admin-registration-secret");
+
+  if (!configuredSecret || suppliedSecret !== configuredSecret) {
+    return res.status(403).json({
+      success: false,
+      message: "Admin registration is not authorized",
+    });
+  }
+
+  next();
+};
+
+const registerRoute = (path, role, ...guards) => router.post(
+  path,
   authLimiter,
+  ...guards,
+  useRole(role),
   upload.single("avatar"),
   registerValidator,
   validateRequest,
   register
 );
 
-router.post(
-  "/register/verify",
+const verifyRegistrationRoute = (path, role) => router.post(
+  path,
   authLimiter,
+  useRole(role),
   verifyRegisterOTPValidator,
   validateRequest,
   verifyRegisterOTP
 );
 
-router.post(
-  "/login",
+const loginRoute = (path, role) => router.post(
+  path,
   authLimiter,
+  useRole(role),
   loginValidator,
   validateRequest,
   login
 );
+
+// Authentication
+// User endpoints retain the original URLs for backwards compatibility.
+registerRoute("/register", "user");
+verifyRegistrationRoute("/register/verify", "user");
+loginRoute("/login", "user");
+
+registerRoute("/register/shopkeeper", "shopkeeper");
+verifyRegistrationRoute("/register/shopkeeper/verify", "shopkeeper");
+loginRoute("/login/shopkeeper", "shopkeeper");
+
+// Never expose an unrestricted public path for creating privileged accounts.
+registerRoute("/register/admin", "admin", requireAdminRegistrationSecret);
+verifyRegistrationRoute("/register/admin/verify", "admin");
+loginRoute("/login/admin", "admin");
 
 router.post(
   "/logout",

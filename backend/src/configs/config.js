@@ -31,6 +31,7 @@ export const configs = {
 
   // JWT
   JWT_SECRET: process.env.JWT_SECRET,
+  ADMIN_REGISTRATION_SECRET: process.env.ADMIN_REGISTRATION_SECRET,
 
   // Cloudinary
   CLOUDINARY_CLOUD_NAME:
