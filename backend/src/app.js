@@ -10,6 +10,7 @@ import wishlistRouter from "./routes/wishlist.route.js";
 import cartRouter from "./routes/cart.route.js";
 import orderRouter from "./routes/order.route.js";
 import paymentRoute from "./routes/payment.route.js";
+import heroRouter from "./routes/hero.route.js";
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use("/api/wishlist", wishlistRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/orders", orderRouter);
 app.use("/api/payment", paymentRoute);
+app.use("/api/hero", heroRouter);
 
 app.get("/", (req, res) => {
   res.json({ message: "Server is running..." });

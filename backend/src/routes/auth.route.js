@@ -9,6 +9,7 @@ import {
     sendChangePasswordOTP,
     changePassword,
     addAddress,
+    deleteAddress,
     logout
 } from "../controllers/auth.controller.js";
 
@@ -97,45 +98,18 @@ router.post(
 
 
 // =====================================================
-// SHOPKEEPER AUTHENTICATION
-// These APIs are for sellers/shopkeepers
+// =====================================================
+// LEGACY / COMPATIBILITY
+// Forward any legacy seller login to admin
 // =====================================================
 
-// Register shopkeeper
-router.post(
-    "/register/shopkeeper",
-    authLimiter,
-    upload.single("avatar"),
-    registerValidator,
-    validateRequest,
-    (req, res, next) => {
-        req.authRole = "shopkeeper";
-        next();
-    },
-    register
-);
-
-// Verify shopkeeper's registration OTP
-router.post(
-    "/register/shopkeeper/verify",
-    authLimiter,
-    verifyRegisterOTPValidator,
-    validateRequest,
-    (req, res, next) => {
-        req.authRole = "shopkeeper";
-        next();
-    },
-    verifyRegisterOTP
-);
-
-// Login shopkeeper
 router.post(
     "/login/shopkeeper",
     authLimiter,
     loginValidator,
     validateRequest,
     (req, res, next) => {
-        req.authRole = "shopkeeper";
+        req.authRole = "admin";
         next();
     },
     login
@@ -246,6 +220,13 @@ router.post(
     addressValidator,
     validateRequest,
     addAddress
+);
+
+// Delete a saved address
+router.delete(
+    "/address/:addressId",
+    isAuthenticated,
+    deleteAddress
 );
 
 

@@ -6,7 +6,9 @@ import {
     getOrderById,
     trackOrder,
     updateOrderStatus,
-    cancelOrder
+    cancelOrder,
+    getAllOrdersForAdmin,
+    getAdminOrderStats
 } from "../controllers/order.controller.js";
 
 import {
@@ -14,9 +16,26 @@ import {
     isAuthenticated
 } from "../middlewares/auth.middleware.js";
 
-
 const router = Router();
 
+// =====================================================
+// ADMIN ORDER MANAGEMENT & ANALYTICS
+// (Must be defined before /:orderId)
+// =====================================================
+
+router.get(
+    "/admin/all",
+    isAuthenticated,
+    authorizeRoles("admin", "shopkeeper"),
+    getAllOrdersForAdmin
+);
+
+router.get(
+    "/admin/stats",
+    isAuthenticated,
+    authorizeRoles("admin", "shopkeeper"),
+    getAdminOrderStats
+);
 
 // =====================================================
 // CREATE ORDER
@@ -28,7 +47,6 @@ router.post(
     createOrder
 );
 
-
 // =====================================================
 // GET MY ORDERS
 // =====================================================
@@ -39,10 +57,8 @@ router.get(
     getMyOrders
 );
 
-
 // =====================================================
 // TRACK ORDER
-// IMPORTANT: Keep this before /:orderId
 // =====================================================
 
 router.get(
@@ -50,7 +66,6 @@ router.get(
     isAuthenticated,
     trackOrder
 );
-
 
 // =====================================================
 // GET SINGLE ORDER
@@ -62,7 +77,6 @@ router.get(
     getOrderById
 );
 
-
 // =====================================================
 // CANCEL ORDER
 // =====================================================
@@ -72,7 +86,6 @@ router.patch(
     isAuthenticated,
     cancelOrder
 );
-
 
 // =====================================================
 // UPDATE ORDER STATUS
@@ -84,6 +97,5 @@ router.patch(
     authorizeRoles("admin", "shopkeeper"),
     updateOrderStatus
 );
-
 
 export default router;

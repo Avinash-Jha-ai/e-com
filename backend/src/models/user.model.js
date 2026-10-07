@@ -51,7 +51,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["user", "admin", "shopkeeper"],
       default: "user",
-      immutable: true,
     },
 
   },

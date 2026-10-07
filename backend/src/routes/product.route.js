@@ -3,6 +3,7 @@ import upload from "../middlewares/upload.middleware.js";
 
 import {
     uploadProduct,
+    updateProduct,
     getAllProduct,
     getProductDetails,
     getSellerProduct,
@@ -18,52 +19,47 @@ import {
 
 const router = Router();
 
+// Storefront Public Product APIs
+router.get("/products", getAllProduct);
+router.get("/product/search", searchProduct);
+router.get("/search", searchProduct);
+router.get("/product/:id", getProductDetails);
+
+// Admin / Single Seller Product Management APIs
 router.post(
     "/seller/createProduct",
     isAuthenticated,
-    authorizeRoles("shopkeeper"),
+    authorizeRoles("admin", "shopkeeper"),
     upload.array("images", 10),
     uploadProduct
 );
 
-router.get(
-    "/products",
-    getAllProduct
-);
-
-router.get(
-    "/product/search",
-    searchProduct
-);
-
-router.get(
-    "/product/:id",
-    getProductDetails
+router.put(
+    "/seller/update/:id",
+    isAuthenticated,
+    authorizeRoles("admin", "shopkeeper"),
+    upload.array("images", 10),
+    updateProduct
 );
 
 router.get(
     "/seller/products",
     isAuthenticated,
-    authorizeRoles("shopkeeper"),
+    authorizeRoles("admin", "shopkeeper"),
     getSellerProduct
 );
 
 router.delete(
     "/seller/delete/:id",
     isAuthenticated,
-    authorizeRoles("shopkeeper"),
+    authorizeRoles("admin", "shopkeeper"),
     deleteProduct
-);
-
-router.get(
-    "/search",
-    searchProduct
 );
 
 router.post(
     "/seller/ai/product",
     isAuthenticated,
-    authorizeRoles("shopkeeper"),
+    authorizeRoles("admin", "shopkeeper"),
     upload.array("images", 10),
     generateProductAI
 );

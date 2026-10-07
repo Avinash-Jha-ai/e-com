@@ -1,40 +1,15 @@
-import mongoose from "mongoose";
-
 import orderModel from "../models/order.model.js";
 import cartModel from "../models/cart.model.js";
 import productModel from "../models/product.model.js";
 import userModel from "../models/user.model.js";
 
 
-// =====================================================
-// CREATE ORDER
-// =====================================================
 
 export const createOrder = async (req, res, next) => {
 
     try {
 
-        // ---------------------------------------------
-        // GET USER ID
-        // ---------------------------------------------
-
-        const userId =
-            req.userId || req.user?._id;
-
-
-        if (!userId) {
-
-            return res.status(401).json({
-                success: false,
-                message: "Authentication required"
-            });
-
-        }
-
-
-        // ---------------------------------------------
-        // REQUEST BODY
-        // ---------------------------------------------
+        const userId = req.user._id;
 
         const {
             addressId,
@@ -42,13 +17,7 @@ export const createOrder = async (req, res, next) => {
         } = req.body;
 
 
-        // ---------------------------------------------
-        // VALIDATE PAYMENT METHOD
-        // ---------------------------------------------
-
-        if (
-            !["COD", "ONLINE"].includes(paymentMethod)
-        ) {
+        if (!["COD", "ONLINE"].includes(paymentMethod)) {
 
             return res.status(400).json({
                 success: false,
@@ -58,33 +27,12 @@ export const createOrder = async (req, res, next) => {
         }
 
 
-        // ---------------------------------------------
-        // VALIDATE ADDRESS ID
-        // ---------------------------------------------
 
-        if (
-            !addressId ||
-            !mongoose.Types.ObjectId.isValid(addressId)
-        ) {
-
-            return res.status(400).json({
-                success: false,
-                message: "A valid address ID is required"
-            });
-
-        }
-
-
-        // ---------------------------------------------
-        // FIND CART
-        // ---------------------------------------------
-
-        const cart =
-            await cartModel
-                .findOne({
-                    user: userId
-                })
-                .populate("items.product");
+        const cart = await cartModel
+            .findOne({
+                user: userId
+            })
+            .populate("items.product");
 
 
         if (!cart) {
@@ -97,10 +45,7 @@ export const createOrder = async (req, res, next) => {
         }
 
 
-        if (
-            !cart.items ||
-            cart.items.length === 0
-        ) {
+        if (cart.items.length === 0) {
 
             return res.status(400).json({
                 success: false,
@@ -110,12 +55,8 @@ export const createOrder = async (req, res, next) => {
         }
 
 
-        // ---------------------------------------------
-        // FIND USER
-        // ---------------------------------------------
 
-        const user =
-            await userModel.findById(userId);
+        const user = await userModel.findById(userId);
 
 
         if (!user) {
@@ -128,12 +69,7 @@ export const createOrder = async (req, res, next) => {
         }
 
 
-        // ---------------------------------------------
-        // FIND ADDRESS
-        // ---------------------------------------------
-
-        const address =
-            user.addresses.id(addressId);
+        const address = user.addresses.id(addressId);
 
 
         if (!address) {
@@ -146,37 +82,26 @@ export const createOrder = async (req, res, next) => {
         }
 
 
-        // ---------------------------------------------
-        // CHECK STOCK
-        // ---------------------------------------------
+        for (const item of cart.items) {
 
-        for (
-            const item of cart.items
-        ) {
-
-            const product =
-                item.product;
+            const product = item.product;
 
 
             if (!product) {
 
                 return res.status(404).json({
                     success: false,
-                    message:
-                        "A product in your cart is no longer available"
+                    message: "Product not found"
                 });
 
             }
 
 
-            if (
-                product.stock < item.quantity
-            ) {
+            if (product.stock < item.quantity) {
 
                 return res.status(400).json({
                     success: false,
-                    message:
-                        `${product.title} has only ${product.stock} items available`
+                    message: `${product.title} has only ${product.stock} items available`
                 });
 
             }
@@ -184,176 +109,76 @@ export const createOrder = async (req, res, next) => {
         }
 
 
-        // ---------------------------------------------
-        // PREPARE ORDER ITEMS
-        // ---------------------------------------------
 
-        const orderItems =
-            cart.items.map((item) => {
+        const orderItems = cart.items.map((item) => {
 
-                return {
+            return {
+                product: item.product._id,
+                quantity: item.quantity,
+                price: item.price
+            };
 
-                    product:
-                        item.product._id,
-
-                    quantity:
-                        item.quantity,
-
-                    price:
-                        item.price
-
-                };
-
-            });
+        });
 
 
-        // ---------------------------------------------
-        // INITIAL TRACKING STATUS
-        // ---------------------------------------------
+        const order = await orderModel.create({
 
-        const initialStatus =
-            paymentMethod === "COD"
-                ? "CONFIRMED"
-                : "PENDING";
+            user: userId,
 
+            items: orderItems,
 
-        const initialMessage =
-            paymentMethod === "COD"
-                ? "Order confirmed"
-                : "Order placed and waiting for payment";
+            totalPrice: cart.totalPrice,
 
+            shippingAddress: {
 
-        // ---------------------------------------------
-        // CREATE ORDER
-        // ---------------------------------------------
+                fullName: address.fullName,
 
-        const order =
-            await orderModel.create({
+                phone: address.phone,
 
-                user: userId,
+                addressLine1: address.addressLine1,
 
-                items: orderItems,
+                addressLine2: address.addressLine2 || "",
 
-                totalPrice:
-                    cart.totalPrice,
+                city: address.city,
 
-                shippingAddress: {
+                state: address.state,
 
-                    fullName:
-                        address.fullName,
+                postalCode: address.postalCode,
 
-                    phone:
-                        address.phone,
+                country: address.country || "India"
 
-                    addressLine1:
-                        address.addressLine1,
+            },
 
-                    addressLine2:
-                        address.addressLine2 || "",
+            paymentMethod: paymentMethod,
 
-                    city:
-                        address.city,
+            paymentStatus: "PENDING",
 
-                    state:
-                        address.state,
+            orderStatus:
+                paymentMethod === "COD"
+                    ? "CONFIRMED"
+                    : "PENDING"
 
-                    postalCode:
-                        address.postalCode,
-
-                    country:
-                        address.country || "India"
-
-                },
-
-                paymentMethod:
-
-                    paymentMethod,
-
-                paymentStatus:
-                    "PENDING",
-
-                orderStatus:
-                    initialStatus,
-
-                tracking: [
-
-                    {
-
-                        status:
-                            initialStatus,
-
-                        message:
-                            initialMessage,
-
-                        date:
-                            new Date()
-
-                    }
-
-                ]
-
-            });
+        });
 
 
-        // ---------------------------------------------
-        // COD
-        // ---------------------------------------------
-
-        if (
-            paymentMethod === "COD"
-        ) {
+        if (paymentMethod === "COD") {
 
             // Reduce stock
+            for (const item of cart.items) {
 
-            for (
-                const item of cart.items
-            ) {
-
-                const updatedProduct =
-                    await productModel.findOneAndUpdate(
-
-                        {
-                            _id:
-                                item.product._id,
-
-                            stock: {
-                                $gte:
-                                    item.quantity
-                            }
-                        },
-
-                        {
-                            $inc: {
-                                stock:
-                                    -item.quantity
-                            }
-                        },
-
-                        {
-                            new: true
+                await productModel.findByIdAndUpdate(
+                    item.product._id,
+                    {
+                        $inc: {
+                            stock: -item.quantity
                         }
-
-                    );
-
-
-                if (!updatedProduct) {
-
-                    return res.status(400).json({
-
-                        success: false,
-
-                        message:
-                            `Insufficient stock for ${item.product.title}`
-
-                    });
-
-                }
+                    }
+                );
 
             }
 
 
             // Clear cart
-
             cart.items = [];
 
             cart.totalPrice = 0;
@@ -362,10 +187,6 @@ export const createOrder = async (req, res, next) => {
 
         }
 
-
-        // ---------------------------------------------
-        // RESPONSE
-        // ---------------------------------------------
 
         return res.status(201).json({
 
@@ -380,7 +201,6 @@ export const createOrder = async (req, res, next) => {
 
         });
 
-
     } catch (error) {
 
         next(error);
@@ -390,65 +210,38 @@ export const createOrder = async (req, res, next) => {
 };
 
 
-// =====================================================
-// GET MY ORDERS
-// =====================================================
 
-export const getMyOrders = async (
-    req,
-    res,
-    next
-) => {
+
+export const getMyOrders = async (req, res, next) => {
 
     try {
 
-        const userId =
-            req.userId || req.user?._id;
+        const userId = req.user._id;
 
 
-        if (!userId) {
-
-            return res.status(401).json({
-
-                success: false,
-
-                message:
-                    "Authentication required"
-
+        const orders = await orderModel
+            .find({
+                user: userId
+            })
+            .populate(
+                "items.product",
+                "title price images"
+            )
+            .sort({
+                createdAt: -1
             });
-
-        }
-
-
-        const orders =
-            await orderModel
-
-                .find({
-                    user: userId
-                })
-
-                .populate(
-                    "items.product",
-                    "title price images"
-                )
-
-                .sort({
-                    createdAt: -1
-                });
 
 
         return res.status(200).json({
 
             success: true,
 
-            count:
-                orders.length,
+            count: orders.length,
 
             orders
 
         });
 
-
     } catch (error) {
 
         next(error);
@@ -458,319 +251,27 @@ export const getMyOrders = async (
 };
 
 
-// =====================================================
-// GET SINGLE ORDER
-// =====================================================
 
-export const getOrderById = async (
-    req,
-    res,
-    next
-) => {
+export const getOrderById = async (req, res, next) => {
 
     try {
 
-        const userId =
-            req.userId || req.user?._id;
+        const userId = req.user._id;
+        const isAdmin = req.userRole === "admin";
 
+        const { orderId } = req.params;
 
-        const {
-            orderId
-        } = req.params;
+        const query = isAdmin ? { _id: orderId } : { _id: orderId, user: userId };
 
-
-        if (!userId) {
-
-            return res.status(401).json({
-
-                success: false,
-
-                message:
-                    "Authentication required"
-
-            });
-
-        }
-
-
-        if (
-            !mongoose.Types.ObjectId.isValid(
-                orderId
+        const order = await orderModel
+            .findOne(query)
+            .populate(
+                "items.product",
+                "title price images"
             )
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Invalid order ID"
-
-            });
-
-        }
-
-
-        const order =
-            await orderModel
-
-                .findOne({
-
-                    _id:
-                        orderId,
-
-                    user:
-                        userId
-
-                })
-
-                .populate(
-                    "items.product",
-                    "title price images"
-                );
-
-
-        if (!order) {
-
-            return res.status(404).json({
-
-                success: false,
-
-                message:
-                    "Order not found"
-
-            });
-
-        }
-
-
-        return res.status(200).json({
-
-            success: true,
-
-            order
-
-        });
-
-
-    } catch (error) {
-
-        next(error);
-
-    }
-
-};
-
-
-// =====================================================
-// TRACK ORDER
-// =====================================================
-
-export const trackOrder = async (
-    req,
-    res,
-    next
-) => {
-
-    try {
-
-        const userId =
-            req.userId || req.user?._id;
-
-
-        const {
-            orderId
-        } = req.params;
-
-
-        // ---------------------------------------------
-        // AUTH CHECK
-        // ---------------------------------------------
-
-        if (!userId) {
-
-            return res.status(401).json({
-
-                success: false,
-
-                message:
-                    "Authentication required"
-
-            });
-
-        }
-
-
-        // ---------------------------------------------
-        // VALIDATE ORDER ID
-        // ---------------------------------------------
-
-        if (
-            !mongoose.Types.ObjectId.isValid(
-                orderId
-            )
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Invalid order ID"
-
-            });
-
-        }
-
-
-        // ---------------------------------------------
-        // FIND USER'S ORDER
-        // ---------------------------------------------
-
-        const order =
-            await orderModel.findOne({
-
-                _id:
-                    orderId,
-
-                user:
-                    userId
-
-            });
-
-
-        if (!order) {
-
-            return res.status(404).json({
-
-                success: false,
-
-                message:
-                    "Order not found"
-
-            });
-
-        }
-
-
-        // ---------------------------------------------
-        // RETURN TRACKING
-        // ---------------------------------------------
-
-        return res.status(200).json({
-
-            success: true,
-
-            orderId:
-                order._id,
-
-            orderStatus:
-                order.orderStatus,
-
-            paymentStatus:
-                order.paymentStatus,
-
-            tracking:
-                order.tracking
-
-        });
-
-
-    } catch (error) {
-
-        next(error);
-
-    }
-
-};
-
-
-// =====================================================
-// UPDATE ORDER STATUS
-// =====================================================
-
-export const updateOrderStatus = async (
-    req,
-    res,
-    next
-) => {
-
-    try {
-
-        const {
-            orderId
-        } = req.params;
-
-
-        const {
-            status
-        } = req.body;
-
-
-        // ---------------------------------------------
-        // VALIDATE ORDER ID
-        // ---------------------------------------------
-
-        if (
-            !mongoose.Types.ObjectId.isValid(
-                orderId
-            )
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Invalid order ID"
-
-            });
-
-        }
-
-
-        // ---------------------------------------------
-        // VALID STATUSES
-        // ---------------------------------------------
-
-        const allowedStatus = [
-
-            "PENDING",
-
-            "CONFIRMED",
-
-            "SHIPPED",
-
-            "DELIVERED",
-
-            "CANCELLED"
-
-        ];
-
-
-        if (
-            !allowedStatus.includes(status)
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Invalid order status"
-
-            });
-
-        }
-
-
-        // ---------------------------------------------
-        // FIND ORDER
-        // ---------------------------------------------
-
-        const order =
-            await orderModel.findById(
-                orderId
+            .populate(
+                "user",
+                "name email"
             );
 
 
@@ -780,153 +281,20 @@ export const updateOrderStatus = async (
 
                 success: false,
 
-                message:
-                    "Order not found"
+                message: "Order not found"
 
             });
 
         }
-
-
-        // ---------------------------------------------
-        // PREVENT UPDATE AFTER FINAL STATUS
-        // ---------------------------------------------
-
-        if (
-            order.orderStatus ===
-                "DELIVERED" ||
-
-            order.orderStatus ===
-                "CANCELLED"
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Order status cannot be changed"
-
-            });
-
-        }
-
-
-        // ---------------------------------------------
-        // STATUS MESSAGE
-        // ---------------------------------------------
-
-        let message;
-
-
-        switch (status) {
-
-            case "PENDING":
-
-                message =
-                    "Order is pending";
-
-                break;
-
-
-            case "CONFIRMED":
-
-                message =
-                    "Order has been confirmed";
-
-                break;
-
-
-            case "SHIPPED":
-
-                message =
-                    "Order has been shipped";
-
-                break;
-
-
-            case "DELIVERED":
-
-                message =
-                    "Order has been delivered";
-
-                break;
-
-
-            case "CANCELLED":
-
-                message =
-                    "Order has been cancelled";
-
-                break;
-
-
-            default:
-
-                message =
-                    "Order status updated";
-
-        }
-
-
-        // ---------------------------------------------
-        // RESTORE STOCK IF CANCELLED
-        // ---------------------------------------------
-
-        if (status === "CANCELLED") {
-            const stockWasDeducted =
-                order.paymentMethod === "COD" ||
-                order.paymentStatus === "PAID";
-
-            if (stockWasDeducted) {
-                for (const item of order.items) {
-                    await productModel.findByIdAndUpdate(item.product, {
-                        $inc: { stock: item.quantity }
-                    });
-                }
-            }
-        }
-
-        // ---------------------------------------------
-        // UPDATE STATUS
-        // ---------------------------------------------
-
-        order.orderStatus =
-            status;
-
-
-        // ---------------------------------------------
-        // ADD TRACKING HISTORY
-        // ---------------------------------------------
-
-        order.tracking.push({
-
-            status:
-                status,
-
-            message:
-                message,
-
-            date:
-                new Date()
-
-        });
-
-
-        await order.save();
 
 
         return res.status(200).json({
 
             success: true,
 
-            message:
-                "Order status updated successfully",
-
             order
 
         });
-
 
     } catch (error) {
 
@@ -937,81 +305,24 @@ export const updateOrderStatus = async (
 };
 
 
-// =====================================================
-// CANCEL ORDER
-// =====================================================
 
-export const cancelOrder = async (
-    req,
-    res,
-    next
-) => {
+
+export const cancelOrder = async (req, res, next) => {
 
     try {
 
-        const userId =
-            req.userId || req.user?._id;
+        const userId = req.user._id;
+
+        const { orderId } = req.params;
 
 
-        const {
-            orderId
-        } = req.params;
+        const order = await orderModel.findOne({
 
+            _id: orderId,
 
-        // ---------------------------------------------
-        // AUTH CHECK
-        // ---------------------------------------------
+            user: userId
 
-        if (!userId) {
-
-            return res.status(401).json({
-
-                success: false,
-
-                message:
-                    "Authentication required"
-
-            });
-
-        }
-
-
-        // ---------------------------------------------
-        // VALIDATE ORDER ID
-        // ---------------------------------------------
-
-        if (
-            !mongoose.Types.ObjectId.isValid(
-                orderId
-            )
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Invalid order ID"
-
-            });
-
-        }
-
-
-        // ---------------------------------------------
-        // FIND ORDER
-        // ---------------------------------------------
-
-        const order =
-            await orderModel.findOne({
-
-                _id:
-                    orderId,
-
-                user:
-                    userId
-
-            });
+        });
 
 
         if (!order) {
@@ -1020,115 +331,48 @@ export const cancelOrder = async (
 
                 success: false,
 
-                message:
-                    "Order not found"
+                message: "Order not found"
 
             });
 
         }
 
 
-        // ---------------------------------------------
-        // CHECK STATUS
-        // ---------------------------------------------
 
         if (
-
-            order.orderStatus ===
-                "SHIPPED" ||
-
-            order.orderStatus ===
-                "DELIVERED" ||
-
-            order.orderStatus ===
-                "CANCELLED"
-
+            order.orderStatus === "SHIPPED" ||
+            order.orderStatus === "DELIVERED" ||
+            order.orderStatus === "CANCELLED"
         ) {
 
             return res.status(400).json({
 
                 success: false,
 
-                message:
-                    `Order cannot be cancelled because it is already ${order.orderStatus.toLowerCase()}`
+                message: "Order cannot be cancelled"
 
             });
 
         }
 
+        for (const item of order.items) {
 
-        // ---------------------------------------------
-        // CHECK WHETHER STOCK WAS DEDUCTED
-        // ---------------------------------------------
+            await productModel.findByIdAndUpdate(
 
-        const stockWasDeducted =
+                item.product,
 
-            order.paymentMethod ===
-                "COD"
+                {
+                    $inc: {
+                        stock: item.quantity
+                    }
+                }
 
-            ||
-
-            order.paymentStatus ===
-                "PAID";
-
-
-        // ---------------------------------------------
-        // RESTORE STOCK
-        // ---------------------------------------------
-
-        if (stockWasDeducted) {
-
-            for (
-                const item of order.items
-            ) {
-
-                await productModel
-                    .findByIdAndUpdate(
-
-                        item.product,
-
-                        {
-
-                            $inc: {
-
-                                stock:
-                                    item.quantity
-
-                            }
-
-                        }
-
-                    );
-
-            }
+            );
 
         }
 
 
-        // ---------------------------------------------
-        // UPDATE ORDER
-        // ---------------------------------------------
-
-        order.orderStatus =
-            "CANCELLED";
-
-
-        // ---------------------------------------------
-        // ADD TRACKING
-        // ---------------------------------------------
-
-        order.tracking.push({
-
-            status:
-                "CANCELLED",
-
-            message:
-                "Order has been cancelled",
-
-            date:
-                new Date()
-
-        });
+        order.orderStatus = "CANCELLED";
 
 
         await order.save();
@@ -1138,13 +382,11 @@ export const cancelOrder = async (
 
             success: true,
 
-            message:
-                "Order cancelled successfully",
+            message: "Order cancelled successfully",
 
             order
 
         });
-
 
     } catch (error) {
 
@@ -1152,4 +394,201 @@ export const cancelOrder = async (
 
     }
 
+};
+
+export const trackOrder = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        const { orderId } = req.params;
+
+        const order = await orderModel.findOne({
+            _id: orderId,
+            user: userId
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            orderId: order._id,
+            orderStatus: order.orderStatus,
+            paymentStatus: order.paymentStatus,
+            tracking: order.tracking
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateOrderStatus = async (req, res, next) => {
+    try {
+        const { orderId } = req.params;
+        const { status, message } = req.body;
+
+        const allowedStatuses = [
+            "PENDING",
+            "CONFIRMED",
+            "SHIPPED",
+            "DELIVERED",
+            "CANCELLED"
+        ];
+
+        if (!status) {
+            return res.status(400).json({
+                success: false,
+                message: "Order status is required"
+            });
+        }
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid status. Allowed statuses: ${allowedStatuses.join(", ")}`
+            });
+        }
+
+        const order = await orderModel.findById(orderId);
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found"
+            });
+        }
+
+        // Don't allow updating terminal orders
+        if (
+            order.orderStatus === "DELIVERED" ||
+            order.orderStatus === "CANCELLED"
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: `Order is already ${order.orderStatus.toLowerCase()}`
+            });
+        }
+
+        // Don't allow cancelling an already shipped order
+        if (
+            status === "CANCELLED" &&
+            order.orderStatus === "SHIPPED"
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Shipped order cannot be cancelled"
+            });
+        }
+
+        order.orderStatus = status;
+
+        order.tracking.push({
+            status,
+            message:
+                message ||
+                `Order status updated to ${status}`,
+            date: new Date()
+        });
+
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Order status updated successfully",
+            order: {
+                _id: order._id,
+                orderStatus: order.orderStatus,
+                paymentStatus: order.paymentStatus,
+                tracking: order.tracking
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getAllOrdersForAdmin = async (req, res, next) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+        const skip = (page - 1) * limit;
+
+        const { status, paymentStatus } = req.query;
+        const filter = {};
+        if (status) filter.orderStatus = status;
+        if (paymentStatus) filter.paymentStatus = paymentStatus;
+
+        const [orders, totalOrders] = await Promise.all([
+            orderModel
+                .find(filter)
+                .populate("user", "name email avatar")
+                .populate("items.product", "title price images")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            orderModel.countDocuments(filter),
+        ]);
+
+        const totalPages = Math.ceil(totalOrders / limit);
+
+        return res.status(200).json({
+            success: true,
+            pagination: {
+                page,
+                limit,
+                totalOrders,
+                totalPages,
+            },
+            orders,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getAdminOrderStats = async (req, res, next) => {
+    try {
+        const [
+            totalOrders,
+            pendingOrders,
+            confirmedOrders,
+            shippedOrders,
+            deliveredOrders,
+            cancelledOrders,
+            revenueData
+        ] = await Promise.all([
+            orderModel.countDocuments(),
+            orderModel.countDocuments({ orderStatus: "PENDING" }),
+            orderModel.countDocuments({ orderStatus: "CONFIRMED" }),
+            orderModel.countDocuments({ orderStatus: "SHIPPED" }),
+            orderModel.countDocuments({ orderStatus: "DELIVERED" }),
+            orderModel.countDocuments({ orderStatus: "CANCELLED" }),
+            orderModel.aggregate([
+                { $match: { orderStatus: { $ne: "CANCELLED" } } },
+                { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+            ])
+        ]);
+
+        const totalRevenue = revenueData.length > 0 ? revenueData[0].totalRevenue : 0;
+
+        return res.status(200).json({
+            success: true,
+            stats: {
+                totalOrders,
+                totalRevenue,
+                pendingOrders,
+                confirmedOrders,
+                shippedOrders,
+                deliveredOrders,
+                cancelledOrders,
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
 };

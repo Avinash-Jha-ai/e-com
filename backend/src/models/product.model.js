@@ -46,6 +46,62 @@ const productSchema = new mongoose.Schema(
             min: 0
         },
 
+        category: {
+            type: String,
+            default: "everyday",
+            trim: true
+        },
+
+        occasion: {
+            type: String,
+            enum: ["festive", "wedding", "everyday", "statement"],
+            default: "everyday",
+            trim: true,
+            lowercase: true
+        },
+
+        fabric: {
+            type: String,
+            enum: ["silk", "organza", "chiffon", "georgette", "linen"],
+            trim: true,
+            lowercase: true
+        },
+
+        discountPrice: {
+            type: Number,
+            min: 0,
+            default: 0
+        },
+
+        isHero: {
+            type: Boolean,
+            default: false
+        },
+
+        heroTagline: {
+            type: String,
+            default: "",
+            trim: true
+        },
+
+        heroSubtitle: {
+            type: String,
+            default: "",
+            trim: true
+        },
+
+        isFeatured: {
+            type: Boolean,
+            default: false
+        },
+
+        tags: [
+            {
+                type: String,
+                trim: true
+            }
+        ],
+
         sellerID: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
@@ -56,6 +112,9 @@ const productSchema = new mongoose.Schema(
         timestamps: true
     }
 );
+
+productSchema.index({ occasion: 1, fabric: 1, stock: 1, price: 1 });
+productSchema.index({ createdAt: -1 });
 
 const productModel = mongoose.models.product || mongoose.model("product", productSchema);
 if (!mongoose.models.Product) {

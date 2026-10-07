@@ -248,10 +248,10 @@ export const login = async (req, res) => {
       });
     }
 
-    if (user.role !== role) {
+    if (role === "admin" && user.role !== "admin") {
       return res.status(403).json({
         success: false,
-        message: `Please use the ${user.role} login endpoint`,
+        message: "Account does not have administrator privileges",
       });
     }
 
@@ -480,6 +480,41 @@ export const addAddress = async (req, res) => {
     });
   } catch (error) {
     console.error("Add Address Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const deleteAddress = async (req, res) => {
+  try {
+    const userId = req.userId || req.user?._id;
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const address = user.addresses.id(req.params.addressId);
+
+    if (!address) {
+      return res.status(404).json({ success: false, message: "Address not found" });
+    }
+
+    const wasDefault = address.isDefault;
+    address.deleteOne();
+
+    if (wasDefault && user.addresses.length > 0) {
+      user.addresses[0].isDefault = true;
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Address deleted successfully",
+      addresses: user.addresses,
+    });
+  } catch (error) {
+    console.error("Delete Address Error:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
