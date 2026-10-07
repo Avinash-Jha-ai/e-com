@@ -52,6 +52,9 @@ export const configs = {
   // Environment
   NODE_ENV: process.env.NODE_ENV || "development",
 
+  // Gemini
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+
   //razopay
 
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,

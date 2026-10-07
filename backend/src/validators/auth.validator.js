@@ -22,6 +22,12 @@ const emailRule = body("email")
   .withMessage("A valid email is required")
   .normalizeEmail();
 
+const loginPasswordRule = body("password")
+  .isString()
+  .withMessage("Password must be a string")
+  .notEmpty()
+  .withMessage("Password is required");
+
 const otpRule = body("otp")
   .isString()
   .withMessage("OTP must be a string")
@@ -41,7 +47,7 @@ export const registerValidator = [
 
 export const verifyRegisterOTPValidator = [emailRule, otpRule];
 
-export const loginValidator = [emailRule, passwordRules];
+export const loginValidator = [emailRule, loginPasswordRule];
 
 export const changePasswordValidator = [
   otpRule,

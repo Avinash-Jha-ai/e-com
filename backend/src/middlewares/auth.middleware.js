@@ -3,7 +3,13 @@ import { configs } from "../configs/config.js";
 
 export const isAuthenticated = (req, res, next) => {
   try {
-    const token = req.cookies.token;
+    const authHeader = req.headers?.authorization;
+    const bearerToken =
+      authHeader && authHeader.startsWith("Bearer ")
+        ? authHeader.split(" ")[1]
+        : null;
+
+    const token = req.cookies?.token || bearerToken;
 
     if (!token) {
       return res.status(401).json({
@@ -19,6 +25,11 @@ export const isAuthenticated = (req, res, next) => {
 
     req.userId = decoded.userId;
     req.userRole = decoded.role;
+    req.user = {
+      _id: decoded.userId,
+      id: decoded.userId,
+      role: decoded.role,
+    };
 
     next();
   } catch (error) {

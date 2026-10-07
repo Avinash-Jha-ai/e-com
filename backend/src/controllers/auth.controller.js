@@ -40,32 +40,30 @@ const setAuthCookie = (res, token) => {
   });
 };
 
-export const register=async (req,res)=>{
-    const {name ,email,password} = req.body ?? {};
+export const register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body ?? {};
     const role = getRequiredRole(req);
 
-    if(!name || !email || !password){
-
-        return res.status(400).json({
-           success:false,
-           message:"name email and password is missing in register",
-        })
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "name email and password is missing in register",
+      });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    const isExist =await userModel.findOne({email :normalizedEmail});
+    const isExist = await userModel.findOne({ email: normalizedEmail });
 
-    
-
-    if(isExist){
-        return res.status(400).json({
-            success:false,
-            message:"user already exist",
-        })
+    if (isExist) {
+      return res.status(400).json({
+        success: false,
+        message: "user already exist",
+      });
     }
 
-    const hashedPassword =await bcrypt.hash(password,12);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     let avatar;
 
@@ -93,20 +91,32 @@ export const register=async (req,res)=>{
       300
     );
 
-    await sendOTP(normalizedEmail, otp);
-
-    
+    try {
+      await sendOTP(normalizedEmail, otp);
+    } catch (emailError) {
+      await redis.del(registrationKey(role, normalizedEmail));
+      console.error("Failed to send verification email:", emailError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send verification email. Please try again.",
+      });
+    }
 
     return res.status(200).json({
       success: true,
       message: "OTP sent to your email",
     });
+  } catch (error) {
+    console.error("Register Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
-
-}   
-
-export const verifyRegisterOTP =async (req,res)=>{
-
+export const verifyRegisterOTP = async (req, res) => {
+  try {
     const { email, otp } = req.body ?? {};
 
     if (!email || !otp) {
@@ -141,6 +151,16 @@ export const verifyRegisterOTP =async (req,res)=>{
       });
     }
 
+    // Check if user was registered in the meantime
+    const existingUser = await userModel.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      await redis.del(registrationKey(role, normalizedEmail));
+      return res.status(400).json({
+        success: false,
+        message: "User with this email already exists",
+      });
+    }
+
     // Create user after OTP verification
     const user = await userModel.create({
       name: registrationData.name,
@@ -164,12 +184,26 @@ export const verifyRegisterOTP =async (req,res)=>{
     return res.status(201).json({
       success: true,
       message: "Registration successful",
+      token,
       user: publicUser(user),
     });
+  } catch (error) {
+    console.error("Verify Register OTP Error:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "User with this email already exists",
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
-}
-
-export const login =async (req,res)=>{
+export const login = async (req, res) => {
+  try {
     const { email, password } = req.body ?? {};
     const role = getRequiredRole(req);
 
@@ -229,15 +263,23 @@ export const login =async (req,res)=>{
     return res.status(200).json({
       success: true,
       message: "Login successful",
+      token,
       user: publicUser(user),
     });
-
-}
+  } catch (error) {
+    console.error("Login Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 export const getMe = async (req, res) => {
   try {
+    const userId = req.userId || req.user?._id;
     const user = await userModel
-      .findById(req.userId)
+      .findById(userId)
       .select("-password");
 
     if (!user) {
@@ -263,7 +305,8 @@ export const getMe = async (req, res) => {
 
 export const sendChangePasswordOTP = async (req, res) => {
   try {
-    const user = await userModel.findById(req.userId);
+    const userId = req.userId || req.user?._id;
+    const user = await userModel.findById(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -283,7 +326,16 @@ export const sendChangePasswordOTP = async (req, res) => {
       300
     );
 
-    await sendOTP(user.email, otp);
+    try {
+      await sendOTP(user.email, otp);
+    } catch (emailError) {
+      await redis.del(`change-password:${user.email}`);
+      console.error("Failed to send change password email:", emailError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send OTP email. Please try again.",
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -321,7 +373,8 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    const user = await userModel.findById(req.userId);
+    const userId = req.userId || req.user?._id;
+    const user = await userModel.findById(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -392,7 +445,8 @@ export const addAddress = async (req, res) => {
       isDefault,
     } = req.body;
 
-    const user = await userModel.findById(req.userId);
+    const userId = req.userId || req.user?._id;
+    const user = await userModel.findById(userId);
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });

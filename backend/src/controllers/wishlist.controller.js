@@ -1,15 +1,31 @@
 import mongoose from "mongoose";
 import wishlistModel from "../models/wishlist.model.js";
+import productModel from "../models/product.model.js";
 
 export const addProductToWishlist = async (req, res) => {
     try {
-        const userId = req.userId;
+        const userId = req.userId || req.user?._id;
         const productId = req.params.id;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required"
+            });
+        }
 
         if (!mongoose.Types.ObjectId.isValid(productId)) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid product ID"
+            });
+        }
+
+        const product = await productModel.findById(productId);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
             });
         }
 
@@ -40,9 +56,10 @@ export const addProductToWishlist = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Add to wishlist error:", error);
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: error.message || "Internal server error"
         });
     }
 };
@@ -50,8 +67,15 @@ export const addProductToWishlist = async (req, res) => {
 
 export const removeProductFromWishlist = async (req, res) => {
     try {
-        const userId = req.userId;
+        const userId = req.userId || req.user?._id;
         const productId = req.params.id;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required"
+            });
+        }
 
         if (!mongoose.Types.ObjectId.isValid(productId)) {
             return res.status(400).json({
@@ -84,9 +108,10 @@ export const removeProductFromWishlist = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Remove from wishlist error:", error);
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: error.message || "Internal server error"
         });
     }
 };
@@ -94,15 +119,27 @@ export const removeProductFromWishlist = async (req, res) => {
 
 export const getWishlist = async (req, res) => {
     try {
-        const userId = req.userId;
+        const userId = req.userId || req.user?._id;
 
-        console.log("GET USER:", userId);
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required"
+            });
+        }
 
-        const wishlist = await wishlistModel.findOne({
-            user: userId
-        });
+        let wishlist = await wishlistModel
+            .findOne({
+                user: userId
+            })
+            .populate("products");
 
-        console.log("WISHLIST FROM DB:", wishlist);
+        if (!wishlist) {
+            wishlist = {
+                user: userId,
+                products: []
+            };
+        }
 
         return res.status(200).json({
             success: true,
@@ -111,11 +148,11 @@ export const getWishlist = async (req, res) => {
         });
 
     } catch (error) {
-        console.log("GET WISHLIST ERROR:", error);
+        console.error("Get wishlist error:", error);
 
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: error.message || "Internal server error"
         });
     }
 };

@@ -4,16 +4,24 @@ import {
     createOrder,
     getMyOrders,
     getOrderById,
+    trackOrder,
+    updateOrderStatus,
     cancelOrder
 } from "../controllers/order.controller.js";
 
-import { isAuthenticated } from "../middlewares/auth.middleware.js";
+import {
+    authorizeRoles,
+    isAuthenticated
+} from "../middlewares/auth.middleware.js";
 
 
 const router = Router();
 
 
-// Create order
+// =====================================================
+// CREATE ORDER
+// =====================================================
+
 router.post(
     "/",
     isAuthenticated,
@@ -21,7 +29,10 @@ router.post(
 );
 
 
-// Get all my orders
+// =====================================================
+// GET MY ORDERS
+// =====================================================
+
 router.get(
     "/",
     isAuthenticated,
@@ -29,7 +40,22 @@ router.get(
 );
 
 
-// Get single order
+// =====================================================
+// TRACK ORDER
+// IMPORTANT: Keep this before /:orderId
+// =====================================================
+
+router.get(
+    "/:orderId/track",
+    isAuthenticated,
+    trackOrder
+);
+
+
+// =====================================================
+// GET SINGLE ORDER
+// =====================================================
+
 router.get(
     "/:orderId",
     isAuthenticated,
@@ -37,11 +63,26 @@ router.get(
 );
 
 
-// Cancel order
+// =====================================================
+// CANCEL ORDER
+// =====================================================
+
 router.patch(
     "/:orderId/cancel",
     isAuthenticated,
     cancelOrder
+);
+
+
+// =====================================================
+// UPDATE ORDER STATUS
+// =====================================================
+
+router.patch(
+    "/:orderId/status",
+    isAuthenticated,
+    authorizeRoles("admin", "shopkeeper"),
+    updateOrderStatus
 );
 
 

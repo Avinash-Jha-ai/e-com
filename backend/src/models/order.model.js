@@ -1,17 +1,22 @@
 import mongoose from "mongoose";
 
-
 const orderSchema = new mongoose.Schema(
     {
-        // User who placed the order
+        // =========================================
+        // USER
+        // =========================================
+
         user: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true
+            required: true,
+            index: true
         },
 
+        // =========================================
+        // ORDER ITEMS
+        // =========================================
 
-        // Products in the order
         items: [
             {
                 product: {
@@ -34,16 +39,20 @@ const orderSchema = new mongoose.Schema(
             }
         ],
 
+        // =========================================
+        // TOTAL PRICE
+        // =========================================
 
-        // Total order amount
         totalPrice: {
             type: Number,
             required: true,
             min: 0
         },
 
+        // =========================================
+        // SHIPPING ADDRESS
+        // =========================================
 
-        // Shipping address snapshot
         shippingAddress: {
             fullName: {
                 type: String,
@@ -94,16 +103,16 @@ const orderSchema = new mongoose.Schema(
             }
         },
 
+        // =========================================
+        // PAYMENT
+        // =========================================
 
-        // Payment method
         paymentMethod: {
             type: String,
             enum: ["COD", "ONLINE"],
             default: "COD"
         },
 
-
-        // Payment status
         paymentStatus: {
             type: String,
             enum: [
@@ -114,8 +123,10 @@ const orderSchema = new mongoose.Schema(
             default: "PENDING"
         },
 
+        // =========================================
+        // RAZORPAY
+        // =========================================
 
-        // Razorpay details
         razorpayOrderId: {
             type: String,
             default: null
@@ -131,8 +142,10 @@ const orderSchema = new mongoose.Schema(
             default: null
         },
 
+        // =========================================
+        // CURRENT ORDER STATUS
+        // =========================================
 
-        // Order status
         orderStatus: {
             type: String,
             enum: [
@@ -142,16 +155,49 @@ const orderSchema = new mongoose.Schema(
                 "DELIVERED",
                 "CANCELLED"
             ],
-            default: "PENDING"
-        }
-    },
+            default: "PENDING",
+            index: true
+        },
 
+        // =========================================
+        // ORDER TRACKING HISTORY
+        // =========================================
+
+        tracking: [
+            {
+                status: {
+                    type: String,
+                    enum: [
+                        "PENDING",
+                        "CONFIRMED",
+                        "SHIPPED",
+                        "DELIVERED",
+                        "CANCELLED"
+                    ],
+                    required: true
+                },
+
+                message: {
+                    type: String,
+                    required: true,
+                    trim: true
+                },
+
+                date: {
+                    type: Date,
+                    default: Date.now
+                }
+            }
+        ]
+    },
     {
         timestamps: true
     }
 );
 
-
-const orderModel = mongoose.model("order", orderSchema);
+const orderModel = mongoose.model(
+    "order",
+    orderSchema
+);
 
 export default orderModel;

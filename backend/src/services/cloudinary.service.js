@@ -3,6 +3,10 @@ import cloudinary from "../configs/cloudinary.js";
 
 export const uploadImage = async (file, folder = "ecommerce") => {
   try {
+    if (!file?.buffer) {
+      throw new Error("Invalid file buffer");
+    }
+
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream({
         folder,

@@ -1,25 +1,37 @@
+import mongoose from "mongoose";
 import cartModel from "../models/cart.model.js";
 import productModel from "../models/product.model.js";
 
-
-
 const calculateCartTotal = (cart) => {
-    return cart.items.reduce((total, item) => {
-        return total + item.price * item.quantity;
+    return (cart.items || []).reduce((total, item) => {
+        const itemPrice = Number(item.price) || 0;
+        const itemQuantity = Number(item.quantity) || 1;
+        return total + itemPrice * itemQuantity;
     }, 0);
 };
 
-
-
-
 export const addToCart = async (req, res) => {
     try {
-        const userId = req.user._id;
+        const userId = req.userId || req.user?._id;
         const { productId } = req.params;
         const { quantity = 1 } = req.body;
 
-        // Validate quantity
-        if (!Number.isInteger(quantity) || quantity < 1) {
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required"
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid product ID"
+            });
+        }
+
+        const parsedQuantity = parseInt(quantity, 10);
+        if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) {
             return res.status(400).json({
                 success: false,
                 message: "Quantity must be a positive integer"
@@ -45,11 +57,11 @@ export const addToCart = async (req, res) => {
             });
         }
 
-        // Get current product price
+        // Get current product price with proper fallback to product.price
         const price =
             product.salePrice > 0
                 ? product.salePrice
-                : product.regularPrice;
+                : (product.price ?? product.regularPrice ?? 0);
 
         // Find or create cart
         let cart = await cartModel.findOne({
@@ -59,7 +71,8 @@ export const addToCart = async (req, res) => {
         if (!cart) {
             cart = await cartModel.create({
                 user: userId,
-                items: []
+                items: [],
+                totalPrice: 0
             });
         }
 
@@ -68,12 +81,8 @@ export const addToCart = async (req, res) => {
             item => item.product.toString() === productId
         );
 
-        
-
         if (existingItem) {
-
-            const newQuantity =
-                existingItem.quantity + quantity;
+            const newQuantity = existingItem.quantity + parsedQuantity;
 
             if (newQuantity > stock) {
                 return res.status(400).json({
@@ -83,16 +92,9 @@ export const addToCart = async (req, res) => {
             }
 
             existingItem.quantity = newQuantity;
-
-            // Update price in case product price changed
             existingItem.price = price;
-        }
-
-        
-
-        else {
-
-            if (quantity > stock) {
+        } else {
+            if (parsedQuantity > stock) {
                 return res.status(400).json({
                     success: false,
                     message: `Only ${stock} items available`
@@ -101,7 +103,7 @@ export const addToCart = async (req, res) => {
 
             cart.items.push({
                 product: productId,
-                quantity,
+                quantity: parsedQuantity,
                 price
             });
         }
@@ -118,7 +120,6 @@ export const addToCart = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error("Add to cart error:", error);
 
         return res.status(500).json({
@@ -129,13 +130,16 @@ export const addToCart = async (req, res) => {
     }
 };
 
-
-
-
 export const getCart = async (req, res) => {
     try {
+        const userId = req.userId || req.user?._id;
 
-        const userId = req.user._id;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required"
+            });
+        }
 
         let cart = await cartModel
             .findOne({ user: userId })
@@ -145,8 +149,17 @@ export const getCart = async (req, res) => {
         if (!cart) {
             cart = await cartModel.create({
                 user: userId,
-                items: []
+                items: [],
+                totalPrice: 0
             });
+        } else {
+            // Clean up any items whose product has been deleted from DB
+            const validItems = cart.items.filter(item => item.product !== null);
+            if (validItems.length !== cart.items.length) {
+                cart.items = validItems;
+                cart.totalPrice = calculateCartTotal(cart);
+                await cart.save();
+            }
         }
 
         return res.status(200).json({
@@ -156,7 +169,6 @@ export const getCart = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error("Get cart error:", error);
 
         return res.status(500).json({
@@ -167,13 +179,24 @@ export const getCart = async (req, res) => {
     }
 };
 
-
-
 export const removeFromCart = async (req, res) => {
     try {
-
-        const userId = req.user._id;
+        const userId = req.userId || req.user?._id;
         const { productId } = req.params;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required"
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid product ID"
+            });
+        }
 
         const cart = await cartModel.findOne({
             user: userId
@@ -213,7 +236,6 @@ export const removeFromCart = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error("Remove from cart error:", error);
 
         return res.status(500).json({
@@ -224,17 +246,28 @@ export const removeFromCart = async (req, res) => {
     }
 };
 
-
-
 export const updateCartItemQuantity = async (req, res) => {
     try {
-
-        const userId = req.user._id;
+        const userId = req.userId || req.user?._id;
         const { productId } = req.params;
         const { quantity } = req.body;
 
-        // Validate quantity
-        if (!Number.isInteger(quantity) || quantity < 1) {
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required"
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid product ID"
+            });
+        }
+
+        const parsedQuantity = parseInt(quantity, 10);
+        if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) {
             return res.status(400).json({
                 success: false,
                 message: "Quantity must be at least 1"
@@ -254,7 +287,7 @@ export const updateCartItemQuantity = async (req, res) => {
         const stock = product.stock || 0;
 
         // Check stock
-        if (quantity > stock) {
+        if (parsedQuantity > stock) {
             return res.status(400).json({
                 success: false,
                 message: `Only ${stock} items available`
@@ -275,7 +308,7 @@ export const updateCartItemQuantity = async (req, res) => {
 
         // Find item
         const item = cart.items.find(
-            item => item.product.toString() === productId
+            it => it.product.toString() === productId
         );
 
         if (!item) {
@@ -286,13 +319,13 @@ export const updateCartItemQuantity = async (req, res) => {
         }
 
         // Update quantity
-        item.quantity = quantity;
+        item.quantity = parsedQuantity;
 
         // Update latest price
         item.price =
             product.salePrice > 0
                 ? product.salePrice
-                : product.regularPrice;
+                : (product.price ?? product.regularPrice ?? 0);
 
         // Recalculate total
         cart.totalPrice = calculateCartTotal(cart);
@@ -306,7 +339,6 @@ export const updateCartItemQuantity = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error("Update cart error:", error);
 
         return res.status(500).json({
@@ -317,13 +349,16 @@ export const updateCartItemQuantity = async (req, res) => {
     }
 };
 
-
-
-
 export const clearCart = async (req, res) => {
     try {
+        const userId = req.userId || req.user?._id;
 
-        const userId = req.user._id;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required"
+            });
+        }
 
         const cart = await cartModel.findOne({
             user: userId
@@ -348,7 +383,6 @@ export const clearCart = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error("Clear cart error:", error);
 
         return res.status(500).json({

@@ -15,7 +15,7 @@ export const uploadProduct = async (req, res) => {
         } = req.body;
 
         // Logged-in seller ID comes from auth middleware
-        const sellerId = req.userId;
+        const sellerId = req.userId || req.user?._id;
 
         // Check authentication
         if (!sellerId) {
@@ -30,11 +30,28 @@ export const uploadProduct = async (req, res) => {
             !title ||
             !description ||
             !shortDescription ||
-            !price
+            price === undefined ||
+            price === null
         ) {
             return res.status(400).json({
                 success: false,
                 message: "Enter proper detail in upload product"
+            });
+        }
+
+        const numericPrice = Number(price);
+        if (Number.isNaN(numericPrice) || numericPrice < 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Price must be a valid non-negative number"
+            });
+        }
+
+        const numericStock = stock !== undefined ? Number(stock) : 10;
+        if (Number.isNaN(numericStock) || numericStock < 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Stock must be a valid non-negative number"
             });
         }
 
@@ -47,7 +64,7 @@ export const uploadProduct = async (req, res) => {
         }
 
         // Front image index
-        const selectedFrontIndex = Number(frontImageIndex);
+        const selectedFrontIndex = Number(frontImageIndex || 0);
 
         if (
             Number.isNaN(selectedFrontIndex) ||
@@ -83,8 +100,8 @@ export const uploadProduct = async (req, res) => {
             title,
             description,
             shortDescription,
-            price,
-            stock,
+            price: numericPrice,
+            stock: numericStock,
             sellerID: sellerId,
             images
         });
@@ -111,8 +128,8 @@ export const uploadProduct = async (req, res) => {
 
 export const getAllProduct = async (req, res) => {
     try {
-        const page = Number(req.query.page) || 1;
-        const limit = Number(req.query.limit) || 10;
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
 
         const skip = (page - 1) * limit;
 
@@ -153,10 +170,10 @@ export const getAllProduct = async (req, res) => {
 export const getSellerProduct = async (req, res) => {
     try {
 
-        const sellerId = req.userId;
+        const sellerId = req.userId || req.user?._id;
 
-        const page = Number(req.query.page) || 1;
-        const limit = Number(req.query.limit) || 10;
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
 
         const skip = (page - 1) * limit;
 
@@ -242,10 +259,12 @@ export const deleteProduct = async (req, res) => {
             });
         }
 
-        const product = await productModel.findOne({
-            _id: productId,
-            sellerID: req.user._id
-        });
+        const sellerId = req.userId || req.user?._id;
+        const deleteFilter = req.userRole === "admin"
+            ? { _id: productId }
+            : { _id: productId, sellerID: sellerId };
+
+        const product = await productModel.findOne(deleteFilter);
 
         if (!product) {
             return res.status(404).json({
@@ -273,29 +292,31 @@ export const deleteProduct = async (req, res) => {
 
 export const searchProduct = async (req, res) => {
     try {
-        const search = req.query.search?.trim();
+        const query = typeof req.query.search === "string" ? req.query.search.trim() : "";
 
-        if (!search) {
+        if (!query) {
             return res.status(400).json({
                 success: false,
                 message: "Search query is required"
             });
         }
 
+        const escapedSearch = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
         const products = await productModel
             .find({
                 title: {
-                    $regex: `^${search}`,
+                    $regex: escapedSearch,
                     $options: "i"
                 }
             })
-            .select("title images price")
+            .select("title images price stock shortDescription")
             .sort({ title: 1 })
-            .limit(10);
+            .limit(20);
 
         return res.status(200).json({
             success: true,
-            search,
+            search: query,
             count: products.length,
             products
         });
