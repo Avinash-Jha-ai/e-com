@@ -4,7 +4,7 @@ import helmet from "helmet";
 import authRouter from "./routes/auth.route.js";
 import { apiLimiter } from "./middlewares/rate-limit.middleware.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
-
+import productRouter from "./routes/product.route.js"
 
 
 const app =express();
@@ -15,6 +15,7 @@ app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 app.use("/api", apiLimiter);
 app.use("/api/auth", authRouter);
+app.use("/api",productRouter);
 
 app.get("/", (req, res) => {
     res.json({ message: "Server is running..." });

@@ -1,4 +1,4 @@
-import gemini from "../config/gemini.js";
+import gemini from "../configs/gemini.js";
 
 export const generateProductDetails = async (file) => {
 
