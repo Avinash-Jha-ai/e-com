@@ -6,7 +6,7 @@ import { apiLimiter } from "./middlewares/rate-limit.middleware.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import productRouter from "./routes/product.route.js";
 import wishlistRouter from "./routes/wishlist.route.js";
-
+import cartRouter from "./routes/cart.route.js";
 const app =express();
 
 app.disable("x-powered-by");
@@ -17,6 +17,7 @@ app.use("/api", apiLimiter);
 app.use("/api/auth", authRouter);
 app.use("/api",productRouter);
 app.use("/api/wishlist", wishlistRouter);
+app.use("/api/cart",cartRouter);
 
 app.get("/", (req, res) => {
     res.json({ message: "Server is running..." });
