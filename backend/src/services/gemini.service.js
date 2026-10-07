@@ -1,18 +1,14 @@
 import gemini from "../configs/gemini.js";
 
-export const generateProductDetails = async (file) => {
-
-    const base64Image = file.buffer.toString("base64");
-
+export const generateProductDetails = async (files) => {
     const prompt = `
-You are an expert e-commerce product listing AI.
+You are an expert e-commerce product listing assistant.
 
-Analyze the product shown in the image.
+Analyze the product shown across all provided images. Each image is labeled
+with its zero-based index in the upload order.
 
-Generate a professional product listing based ONLY on information
-that can reasonably be identified from the image.
-
-Return the result in this exact JSON structure:
+Generate a professional product listing based ONLY on information that can
+reasonably be identified from the images. Return only a JSON object in this shape:
 
 {
     "title": "",
@@ -21,90 +17,95 @@ Return the result in this exact JSON structure:
     "category": "",
     "brand": null,
     "color": "",
-    "tags": []
+    "tags": [],
+    "frontImageIndex": 0
 }
 
 Rules:
-
-1. Create a clear and attractive product title.
-2. shortDescription must be 1-2 sentences.
-3. description should be detailed and suitable for an e-commerce website.
-4. Identify the product category.
-5. Identify the brand only if it is clearly visible.
-6. If the brand cannot be identified, return null.
-7. Identify the primary visible color.
-8. Generate 5-10 useful search tags.
-9. Never invent specifications that cannot be determined from the image.
-10. Do not mention that you are an AI.
-11. Return ONLY JSON.
+- shortDescription must be 1-2 sentences.
+- Identify the brand only if clearly visible; otherwise use null.
+- Generate 5-10 useful search tags.
+- Never invent specifications that cannot be determined from the images.
+- Choose the clearest, best-lit image showing the complete product unobstructed
+  against a clean background. Set frontImageIndex to that image's zero-based index.
+- Do not mention that you are an AI.
 `;
 
-    const response = await gemini.models.generateContent({
-        model: "gemini-3.8-flash",
-
-        contents: [
+    const contents = [
+        {
+            text: prompt
+        },
+        ...files.flatMap((file, index) => [
+            {
+                text: `Product image index ${index}:`
+            },
             {
                 inlineData: {
                     mimeType: file.mimetype,
-                    data: base64Image
+                    data: file.buffer.toString("base64")
                 }
-            },
-            {
-                text: prompt
             }
-        ],
+        ])
+    ];
 
-        config: {
-            responseMimeType: "application/json",
-
-            responseSchema: {
-                type: "object",
-
-                properties: {
-                    title: {
-                        type: "string"
-                    },
-
-                    shortDescription: {
-                        type: "string"
-                    },
-
-                    description: {
-                        type: "string"
-                    },
-
-                    category: {
-                        type: "string"
-                    },
-
-                    brand: {
-                        type: ["string", "null"]
-                    },
-
-                    color: {
-                        type: "string"
-                    },
-
-                    tags: {
-                        type: "array",
-                        items: {
-                            type: "string"
-                        }
-                    }
+    const config = {
+        responseMimeType: "application/json",
+        responseSchema: {
+            type: "object",
+            properties: {
+                title: { type: "string" },
+                shortDescription: { type: "string" },
+                description: { type: "string" },
+                category: { type: "string" },
+                brand: { type: ["string", "null"] },
+                color: { type: "string" },
+                tags: {
+                    type: "array",
+                    items: { type: "string" }
                 },
-
-                required: [
-                    "title",
-                    "shortDescription",
-                    "description",
-                    "category",
-                    "brand",
-                    "color",
-                    "tags"
-                ]
-            }
+                frontImageIndex: { type: "integer" }
+            },
+            required: [
+                "title",
+                "shortDescription",
+                "description",
+                "category",
+                "brand",
+                "color",
+                "tags",
+                "frontImageIndex"
+            ]
         }
-    });
+    };
 
-    return JSON.parse(response.text);
+    const models = [
+        process.env.GEMINI_MODEL || "gemini-3.8-flash",
+        process.env.GEMINI_FALLBACK_MODEL || "gemini-2.5-flash"
+    ];
+
+    for (let index = 0; index < models.length; index += 1) {
+        try {
+            const response = await gemini.models.generateContent({
+                model: models[index],
+                contents,
+                config
+            });
+
+            return JSON.parse(response.text);
+        } catch (error) {
+            const status = Number(error?.status ?? error?.code);
+            const canFallback = index < models.length - 1;
+            const isTemporaryFailure = status === 429 || status >= 500;
+
+            if (!canFallback || !isTemporaryFailure) {
+                throw error;
+            }
+
+            console.warn(
+                `Gemini model ${models[index]} failed with status ${status}; trying fallback model ${models[index + 1]}`
+            );
+        }
+    }
+
+    throw new Error("No Gemini model was available to generate product details");
 };

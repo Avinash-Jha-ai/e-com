@@ -64,6 +64,7 @@ router.post(
     "/seller/ai/product",
     isAuthenticated,
     authorizeRoles("shopkeeper"),
+    upload.array("images", 10),
     generateProductAI
 );
 

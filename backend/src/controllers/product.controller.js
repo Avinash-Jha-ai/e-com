@@ -307,76 +307,24 @@ export const searchProduct = async (req, res) => {
         });
     }
 };
-
 export const generateProductAI = async (req, res) => {
     try {
-        const { productId } = req.body;
-
-        if (!productId) {
+        if (!req.files?.length) {
             return res.status(400).json({
                 success: false,
-                message: "Product ID is required"
+                message: "Please upload at least one product image"
             });
         }
 
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid product ID"
-            });
+        const aiData = await generateProductDetails(req.files);
+
+        if (
+            !Number.isInteger(aiData.frontImageIndex) ||
+            aiData.frontImageIndex < 0 ||
+            aiData.frontImageIndex >= req.files.length
+        ) {
+            throw new Error("AI returned an invalid front image index");
         }
-
-        const product = await productModel.findOne({
-            _id: productId,
-            sellerID: req.user._id
-        });
-
-        if (!product) {
-            return res.status(404).json({
-                success: false,
-                message: "Product not found"
-            });
-        }
-
-        const frontImage = product.images?.find(
-            image => image.isFront === true
-        );
-
-        if (!frontImage) {
-            return res.status(400).json({
-                success: false,
-                message: "Please select a front image first"
-            });
-        }
-
-        if (!frontImage.url) {
-            return res.status(400).json({
-                success: false,
-                message: "Product image URL not found"
-            });
-        }
-
-        const imageResponse = await fetch(frontImage.url);
-
-        if (!imageResponse.ok) {
-            return res.status(400).json({
-                success: false,
-                message: "Unable to access product image"
-            });
-        }
-
-        const arrayBuffer = await imageResponse.arrayBuffer();
-
-        const buffer = Buffer.from(arrayBuffer);
-
-        const file = {
-            buffer,
-            mimetype:
-                imageResponse.headers.get("content-type") ||
-                "image/jpeg"
-        };
-
-        const aiData = await generateProductDetails(file);
 
         return res.status(200).json({
             success: true,
@@ -387,10 +335,15 @@ export const generateProductAI = async (req, res) => {
     } catch (error) {
         console.error("Product AI Error:", error);
 
-        return res.status(500).json({
+        const upstreamStatus = Number(error?.status ?? error?.code);
+        const isTemporarilyUnavailable =
+            upstreamStatus === 429 || upstreamStatus >= 500;
+
+        return res.status(isTemporarilyUnavailable ? 503 : 500).json({
             success: false,
-            message: "Failed to generate product details",
-            error: error.message
+            message: isTemporarilyUnavailable
+                ? "AI service is temporarily unavailable. Please try again shortly."
+                : "Failed to generate product details"
         });
     }
 };
