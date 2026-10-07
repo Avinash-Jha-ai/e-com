@@ -21,7 +21,7 @@ router.post(
 );
 
 
-// Get logged-in user's orders
+// Get all my orders
 router.get(
     "/",
     isAuthenticated,

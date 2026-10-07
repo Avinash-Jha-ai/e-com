@@ -1,13 +1,17 @@
 import mongoose from "mongoose";
 
+
 const orderSchema = new mongoose.Schema(
     {
+        // User who placed the order
         user: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
         },
 
+
+        // Products in the order
         items: [
             {
                 product: {
@@ -30,66 +34,105 @@ const orderSchema = new mongoose.Schema(
             }
         ],
 
+
+        // Total order amount
         totalPrice: {
             type: Number,
             required: true,
             min: 0
         },
 
+
+        // Shipping address snapshot
         shippingAddress: {
             fullName: {
                 type: String,
-                required: true
+                required: true,
+                trim: true
             },
 
             phone: {
                 type: String,
-                required: true
+                required: true,
+                trim: true
             },
 
             addressLine1: {
                 type: String,
-                required: true
+                required: true,
+                trim: true
             },
 
             addressLine2: {
                 type: String,
-                default: ""
+                default: "",
+                trim: true
             },
 
             city: {
                 type: String,
-                required: true
+                required: true,
+                trim: true
             },
 
             state: {
                 type: String,
-                required: true
+                required: true,
+                trim: true
             },
 
             postalCode: {
                 type: String,
-                required: true
+                required: true,
+                trim: true
             },
 
             country: {
                 type: String,
-                default: "India"
+                default: "India",
+                trim: true
             }
         },
 
+
+        // Payment method
         paymentMethod: {
             type: String,
             enum: ["COD", "ONLINE"],
             default: "COD"
         },
 
+
+        // Payment status
         paymentStatus: {
             type: String,
-            enum: ["PENDING", "PAID", "FAILED"],
+            enum: [
+                "PENDING",
+                "PAID",
+                "FAILED"
+            ],
             default: "PENDING"
         },
 
+
+        // Razorpay details
+        razorpayOrderId: {
+            type: String,
+            default: null
+        },
+
+        razorpayPaymentId: {
+            type: String,
+            default: null
+        },
+
+        razorpaySignature: {
+            type: String,
+            default: null
+        },
+
+
+        // Order status
         orderStatus: {
             type: String,
             enum: [
@@ -102,10 +145,12 @@ const orderSchema = new mongoose.Schema(
             default: "PENDING"
         }
     },
+
     {
         timestamps: true
     }
 );
+
 
 const orderModel = mongoose.model("order", orderSchema);
 
