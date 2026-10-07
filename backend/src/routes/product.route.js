@@ -1,4 +1,5 @@
 import { Router } from "express";
+import upload from "../middlewares/upload.middleware.js";
 
 import {
     uploadProduct,
@@ -21,12 +22,18 @@ router.post(
     "/seller/createProduct",
     isAuthenticated,
     authorizeRoles("shopkeeper"),
+    upload.array("images", 10),
     uploadProduct
 );
 
 router.get(
     "/products",
     getAllProduct
+);
+
+router.get(
+    "/product/search",
+    searchProduct
 );
 
 router.get(

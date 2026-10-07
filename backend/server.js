@@ -7,7 +7,7 @@ const startServer = async () => {
   try {
     await connectMongoDb();
     app.listen(configs.PORT, () => {
-      console.log(`✅ link : http://localhost:${configs.PORT}`);
+      console.log(`✅ link : http://localhost:${configs.PORT}/api`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);

@@ -10,55 +10,97 @@ export const uploadProduct = async (req, res) => {
             description,
             shortDescription,
             price,
-            stock
+            stock,
+            frontImageIndex
         } = req.body;
 
-        const frontImageIndex = Number(req.body.frontImageIndex);
-        const seller = req.user;
+        // Logged-in seller ID comes from auth middleware
+        const sellerId = req.userId;
 
-        if (!title || !description || !shortDescription || !price) {
+        // Check authentication
+        if (!sellerId) {
+            return res.status(401).json({
+                success: false,
+                message: "Seller authentication required"
+            });
+        }
+
+        // Validate product details
+        if (
+            !title ||
+            !description ||
+            !shortDescription ||
+            !price
+        ) {
             return res.status(400).json({
-                status: false,
+                success: false,
                 message: "Enter proper detail in upload product"
             });
         }
 
-        const images = req.files
-            ? await Promise.all(
-                req.files.map(async (file, index) => {
-                    const uploadRes = await uploadImage(
-                        file,
-                        `ecommerce/${seller._id}/products`
-                    );
+        // Check images
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Please upload at least one image"
+            });
+        }
 
-                    return {
-                        publicId: uploadRes.publicId,
-                        privateId: uploadRes.privateId,
-                        url: uploadRes.url,
-                        isFront: index === frontImageIndex
-                    };
-                })
-            )
-            : [];
+        // Front image index
+        const selectedFrontIndex = Number(frontImageIndex);
 
+        if (
+            Number.isNaN(selectedFrontIndex) ||
+            selectedFrontIndex < 0 ||
+            selectedFrontIndex >= req.files.length
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid front image index"
+            });
+        }
+
+        // Upload all images
+        const images = await Promise.all(
+            req.files.map(async (file, index) => {
+
+                const imageUrl = await uploadImage(
+                    file,
+                    `ecommerce/${sellerId}/products`
+                );
+
+                return {
+                    url: imageUrl,
+
+                    // Selected image becomes front image
+                    isFront: index === selectedFrontIndex
+                };
+            })
+        );
+
+        // Create product
         const product = await productModel.create({
             title,
             description,
             shortDescription,
             price,
             stock,
-            sellerID: seller._id,
+            sellerID: sellerId,
             images
         });
 
         return res.status(201).json({
-            message: "Product has been created",
             success: true,
+            message: "Product has been created",
             product
         });
 
     } catch (error) {
-        console.error("Upload Product Error:", error);
+
+        console.error(
+            "Upload Product Error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -110,7 +152,8 @@ export const getAllProduct = async (req, res) => {
 
 export const getSellerProduct = async (req, res) => {
     try {
-        const sellerId = req.user._id;
+
+        const sellerId = req.userId;
 
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 10;
