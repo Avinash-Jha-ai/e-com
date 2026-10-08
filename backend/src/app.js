@@ -11,14 +11,29 @@ import cartRouter from "./routes/cart.route.js";
 import orderRouter from "./routes/order.route.js";
 import paymentRoute from "./routes/payment.route.js";
 import heroRouter from "./routes/hero.route.js";
+import { configs } from "./configs/config.js";
 
 const app = express();
 
 app.disable("x-powered-by");
 app.use(helmet());
+const allowedOrigins = new Set(
+  configs.FRONTEND_URL.split(",")
+    .map((url) => url.trim())
+    .filter(Boolean)
+    .map((url) => new URL(url).origin)
+);
+
+if (configs.NODE_ENV !== "production") {
+  allowedOrigins.add("http://localhost:5173");
+  allowedOrigins.add("http://127.0.0.1:5173");
+}
+
 app.use(
   cors({
-    origin: true,
+    origin: (origin, callback) => {
+      callback(null, !origin || allowedOrigins.has(origin));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [

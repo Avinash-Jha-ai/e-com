@@ -2,6 +2,30 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
+## Vercel deployment
+
+Set the Vercel project root directory to `frontend`. The `vercel.json` rewrite
+serves the React app for direct visits to client-side routes such as `/shop`.
+
+The production build uses this public API base URL:
+
+```env
+VITE_API_URL=https://e-com-ten-lilac.vercel.app/api
+```
+
+You can also add `VITE_API_URL` with this value in Vercel → Settings →
+Environment Variables as a **Config** variable for Production (and Preview if
+needed). Do not mark it as a Secret; it is a public API address, not a key.
+
+On the backend deployment, set `FRONTEND_URL` to the deployed frontend origin:
+
+```env
+FRONTEND_URL=https://sarees-chi.vercel.app
+```
+
+For multiple frontend origins, separate them with commas. Redeploy both
+projects after changing environment variables.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)

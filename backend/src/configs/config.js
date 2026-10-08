@@ -51,6 +51,7 @@ export const configs = {
 
   // Environment
   NODE_ENV: process.env.NODE_ENV || "development",
+  FRONTEND_URL: process.env.FRONTEND_URL || "",
 
   // Gemini
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
