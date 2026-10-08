@@ -27,6 +27,7 @@ const allowedOrigins = new Set(
 if (configs.NODE_ENV !== "production") {
   allowedOrigins.add("http://localhost:5173");
   allowedOrigins.add("http://127.0.0.1:5173");
+  allowedOrigins.add("https://sarees-chi.vercel.app");
 }
 
 app.use(

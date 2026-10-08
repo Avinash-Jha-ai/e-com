@@ -4,18 +4,24 @@ This template provides a minimal setup to get React working in Vite with HMR and
 
 ## Vercel deployment
 
-Set the Vercel project root directory to `frontend`. The `vercel.json` rewrite
-serves the React app for direct visits to client-side routes such as `/shop`.
+Set the Vercel frontend project root directory to `frontend`. The `vercel.json`
+rewrite serves the React app for direct visits to client-side routes such as
+`/shop`.
 
-The production build uses this public API base URL:
+The production build defaults to this public API base URL:
 
 ```env
 VITE_API_URL=https://e-com-ten-lilac.vercel.app/api
 ```
 
-You can also add `VITE_API_URL` with this value in Vercel → Settings →
-Environment Variables as a **Config** variable for Production (and Preview if
-needed). Do not mark it as a Secret; it is a public API address, not a key.
+You can override it in Vercel → Settings → Environment Variables with
+`VITE_API_URL` as a **Config** variable for Production (and Preview if needed).
+Use the full API URL above; replace any existing `VITE_API_URL=/api`. Do not
+mark it as a Secret; it is a public API address, not a key.
+
+Set the Vercel backend project root directory to `backend`. Its Vercel handler
+connects to MongoDB before serving API requests and reuses that connection for
+warm function instances.
 
 On the backend deployment, set `FRONTEND_URL` to the deployed frontend origin:
 
