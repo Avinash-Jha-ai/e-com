@@ -81,6 +81,7 @@ export const createHeroSlide = async (req, res) => {
       subtitle,
       badge,
       image,
+      layout,
       productId,
       ctaText,
       ctaLink,
@@ -88,17 +89,42 @@ export const createHeroSlide = async (req, res) => {
       isActive,
     } = req.body;
 
-    if (!title) {
+    if (layout !== undefined && !["overlay", "split"].includes(layout)) {
       return res.status(400).json({
         success: false,
-        message: "Title is required for hero slide",
+        message: "Hero layout must be overlay or split",
       });
     }
 
-    let bannerImage = image;
+    const slideTitle = typeof title === "string" ? title.trim() : "";
+    const slideSubtitle = typeof subtitle === "string" ? subtitle.trim() : "";
+    const hasText = Boolean(slideTitle || slideSubtitle);
+    const hasImageSource = Boolean(
+      (typeof image === "string" && image.trim()) || req.file || productId
+    );
+
+    if (layout === "split" && !hasImageSource) {
+      return res.status(400).json({
+        success: false,
+        message: "Split hero slides require an image or linked product",
+      });
+    }
+
+    if (!hasText && !hasImageSource) {
+      return res.status(400).json({
+        success: false,
+        message: "Add a hero image, title, or description",
+      });
+    }
+
+    let bannerImage = typeof image === "string" ? image.trim() : "";
     let linkedProduct = null;
 
-    if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+    if (productId) {
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
+        return res.status(400).json({ success: false, message: "Invalid product ID" });
+      }
+
       linkedProduct = await productModel.findById(productId);
       if (!linkedProduct) {
         return res.status(404).json({ success: false, message: "Product not found" });
@@ -123,18 +149,19 @@ export const createHeroSlide = async (req, res) => {
       bannerImage = await uploadImage(req.file, `ecommerce/${req.userId}/hero`);
     }
 
-    if (!bannerImage) {
+    if (!bannerImage && !hasText) {
       return res.status(400).json({
         success: false,
-        message: "Hero banner image URL is required",
+        message: "The linked product has no image. Add hero text or upload an image.",
       });
     }
 
     const newSlide = await heroModel.create({
-      title,
-      subtitle: subtitle || (linkedProduct ? linkedProduct.shortDescription : ""),
+      title: slideTitle,
+      subtitle: slideSubtitle || (linkedProduct ? linkedProduct.shortDescription : ""),
       badge: badge || "Featured Drape",
       image: bannerImage,
+      layout: layout || "overlay",
       product: linkedProduct ? linkedProduct._id : null,
       sellerID: req.userId,
       ctaText: ctaText || "Discover Drape",
@@ -178,6 +205,7 @@ export const updateHeroSlide = async (req, res) => {
       subtitle,
       badge,
       image,
+      layout,
       productId,
       ctaText,
       ctaLink,
@@ -201,6 +229,15 @@ export const updateHeroSlide = async (req, res) => {
     if (subtitle !== undefined) slide.subtitle = subtitle;
     if (badge !== undefined) slide.badge = badge;
     if (image !== undefined) slide.image = image;
+    if (layout !== undefined) {
+      if (!["overlay", "split"].includes(layout)) {
+        return res.status(400).json({
+          success: false,
+          message: "Hero layout must be overlay or split",
+        });
+      }
+      slide.layout = layout;
+    }
     if (ctaText !== undefined) slide.ctaText = ctaText;
     if (ctaLink !== undefined) slide.ctaLink = ctaLink;
     if (order !== undefined) slide.order = Number(order);

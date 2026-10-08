@@ -45,6 +45,15 @@ export const registerValidator = [
   passwordRules,
 ];
 
+export const updateProfileValidator = [
+  body("name")
+    .isString()
+    .withMessage("Name must be a string")
+    .trim()
+    .isLength({ min: 2, max: 80 })
+    .withMessage("Name must be between 2 and 80 characters"),
+];
+
 export const verifyRegisterOTPValidator = [emailRule, otpRule];
 
 export const loginValidator = [emailRule, loginPasswordRule];

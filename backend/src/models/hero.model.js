@@ -4,7 +4,7 @@ const heroSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
     },
     subtitle: {
@@ -19,8 +19,13 @@ const heroSchema = new mongoose.Schema(
     },
     image: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
+    },
+    layout: {
+      type: String,
+      enum: ["overlay", "split"],
+      default: "overlay",
     },
     product: {
       type: mongoose.Schema.Types.ObjectId,

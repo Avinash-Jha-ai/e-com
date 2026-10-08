@@ -45,6 +45,11 @@ export default function AccountOverviewPage() {
             </div>
           </div>
         </div>
+        <Link to="/account/profile">
+          <Button variant="outline" size="sm">
+            Edit Profile
+          </Button>
+        </Link>
       </div>
 
       {/* Quick Stats Grid */}

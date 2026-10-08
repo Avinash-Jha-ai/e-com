@@ -47,6 +47,10 @@ export function AuthProvider({ children }) {
     setUser((prev) => (prev ? { ...prev, addresses: newAddresses } : prev));
   }, []);
 
+  const updateProfile = useCallback((profile) => {
+    setUser((prev) => (prev ? { ...prev, ...profile } : prev));
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -58,6 +62,7 @@ export function AuthProvider({ children }) {
         refreshUser: fetchCurrentUser,
         logout,
         updateAddresses,
+        updateProfile,
       }}
     >
       {children}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { User, Package, Heart, MapPin, Shield, LogOut } from 'lucide-react';
+import { User, UserRound, Package, Heart, MapPin, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useUI } from '../../context/UIContext';
 
@@ -17,6 +17,7 @@ export default function AccountLayout() {
 
   const navLinks = [
     { name: 'Overview', to: '/account', end: true, icon: User },
+    { name: 'Profile', to: '/account/profile', icon: UserRound },
     { name: 'My Orders', to: '/account/orders', icon: Package },
     { name: 'Saved Wishlist', to: '/wishlist', icon: Heart },
     { name: 'Saved Addresses', to: '/account/addresses', icon: MapPin },

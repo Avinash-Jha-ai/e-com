@@ -23,25 +23,27 @@ import { formatPrice, getProductFrontImage } from '../../utils/formatters';
 const DEFAULT_HERO_SLIDES = [
   {
     _id: 'default-1',
-    badge: 'The Autumn / Festive Edit 2026',
-    title: 'The New Indian Classic',
+    badge: 'Vanya / Modern Heritage',
+    title: 'Tradition, woven for today.',
     subtitle:
-      'Sarees designed for the way you live, celebrate, and remember. Weaving timeless handloom traditions into contemporary drape silhouettes.',
+      'Discover heirloom handloom sarees made for the moments that matter — timeless Indian craftsmanship, reimagined for the way you live now.',
     image:
       'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=2000&q=90',
-    ctaText: 'Shop New Arrivals',
+    ctaText: 'Explore the collection',
     ctaLink: '/shop',
+    layout: 'overlay',
   },
   {
     _id: 'default-2',
-    badge: 'Heritage Brocades & Regal Zari',
-    title: 'The Imperial Banarasi Edition',
+    badge: 'Woven by hand / Made to be remembered',
+    title: 'An heirloom in the making.',
     subtitle:
-      'Spun from raw mulberry silk threads and antique gold zari. An ode to heirloom craftsmanship and ceremonial grandeur.',
+      'Meet the artistry of Banarasi silk: luminous zari, considered details, and a story you will carry long after the celebration.',
     image:
       'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=2000&q=90',
-    ctaText: 'Explore Collection',
+    ctaText: 'Discover Banarasi',
     ctaLink: '/shop?collection=festive',
+    layout: 'overlay',
   },
 ];
 
@@ -95,6 +97,7 @@ export default function HomePage() {
   }, [slideCount, isPaused]);
 
   const activeSlide = combinedSlides[currentSlideIndex] || combinedSlides[0];
+  const isSplitLayout = activeSlide.layout === 'split';
 
   const handlePrevSlide = () => {
     setCurrentSlideIndex((prev) => (prev === 0 ? slideCount - 1 : prev - 1));
@@ -156,6 +159,93 @@ export default function HomePage() {
     },
   ];
 
+  const slideCopy = (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={activeSlide._id || currentSlideIndex}
+        initial={{ opacity: 0, y: 25 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="max-w-2xl space-y-4 sm:space-y-5"
+      >
+        <div
+          className={`inline-flex items-center space-x-2 text-[10px] sm:text-[11px] uppercase tracking-wide-luxury font-semibold px-3 py-1 rounded-full border ${
+            isSplitLayout
+              ? 'text-wine bg-wine/5 border-gold/40'
+              : 'text-gold bg-charcoal/50 backdrop-blur-md border-gold/30'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-gold" />
+          <span>{activeSlide.badge || 'Vanya / Modern Heritage'}</span>
+        </div>
+
+        {activeSlide.title && (
+          <h1
+            className={`font-serif text-4xl sm:text-6xl lg:text-7xl font-light tracking-tight leading-[1.02] ${
+              isSplitLayout ? 'text-burgundy' : 'text-cream drop-shadow-sm'
+            }`}
+          >
+            {activeSlide.title}
+          </h1>
+        )}
+
+        {activeSlide.subtitle && (
+          <p
+            className={`text-xs sm:text-base max-w-xl leading-relaxed font-light pt-1 ${
+              isSplitLayout ? 'text-charcoal-muted' : 'text-ivory/90'
+            }`}
+          >
+            {activeSlide.subtitle}
+          </p>
+        )}
+
+        {activeSlide.product && (
+          <div
+            className={`inline-flex items-center gap-3 px-3.5 py-1.5 rounded-brand text-xs ${
+              isSplitLayout
+                ? 'bg-cream border border-sand/50 text-charcoal'
+                : 'bg-white/10 backdrop-blur-md border border-white/20 text-cream'
+            }`}
+          >
+            <span className="font-medium truncate max-w-[200px]">
+              {activeSlide.product.title}
+            </span>
+            <span className="text-gold font-semibold">
+              {formatPrice(activeSlide.product.price)}
+            </span>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-4 pt-3">
+          <Link to={activeSlide.ctaLink || '/shop'}>
+            <Button
+              variant="primary"
+              size="lg"
+              className="bg-wine hover:bg-burgundy text-ivory shadow-lg flex items-center gap-2"
+            >
+              <span>{activeSlide.ctaText || 'Discover Drape'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+          <Link to="/shop">
+            <Button
+              variant="outline"
+              size="lg"
+              className={
+                isSplitLayout
+                  ? 'border-sand text-charcoal hover:bg-cream'
+                  : 'border-ivory/60 text-ivory hover:bg-ivory hover:text-charcoal backdrop-blur-xs'
+              }
+            >
+              View All Sarees
+            </Button>
+          </Link>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+
   return (
     <div className="space-y-20 sm:space-y-32">
       {/* ───────────────────────────────────────────────────────────── */}
@@ -164,96 +254,72 @@ export default function HomePage() {
       <section
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
-        className="relative w-full h-[85vh] sm:h-[92vh] overflow-hidden bg-charcoal select-none group"
+        className={`relative w-full overflow-hidden select-none group ${
+          isSplitLayout
+            ? 'min-h-[680px] bg-ivory lg:h-[760px]'
+            : 'h-[78svh] min-h-[560px] max-h-[820px] bg-charcoal sm:h-[88svh]'
+        }`}
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeSlide._id || currentSlideIndex}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
-            className="absolute inset-0"
-          >
-            {/* Background Image with subtle zoom */}
-            <motion.img
-              initial={{ scale: 1.06 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 6, ease: 'easeOut' }}
-              src={activeSlide.image}
-              alt={activeSlide.title}
-              className="w-full h-full object-cover object-[center_25%] brightness-[0.82]"
-            />
-            {/* Luxury gradient overlays for maximum text legibility */}
-            <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/30 to-charcoal/40" />
-            <div className="absolute inset-0 bg-gradient-to-r from-charcoal/70 via-charcoal/20 to-transparent" />
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Hero Copy & CTAs */}
-        <div className="relative h-full max-w-7xl mx-auto px-6 sm:px-12 flex flex-col justify-end pb-16 sm:pb-24 text-ivory z-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeSlide._id || currentSlideIndex}
-              initial={{ opacity: 0, y: 25 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="max-w-2xl space-y-4"
-            >
-              {/* Badge */}
-              <div className="inline-flex items-center space-x-2 text-[10px] sm:text-[11px] uppercase tracking-wide-luxury text-gold font-semibold bg-charcoal/50 backdrop-blur-md px-3 py-1 rounded-full border border-gold/30">
-                <Sparkles className="w-3.5 h-3.5 text-gold" />
-                <span>{activeSlide.badge || 'Featured Handloom Drape'}</span>
-              </div>
-
-              {/* Title */}
-              <h1 className="font-serif text-3xl sm:text-6xl lg:text-7xl font-light tracking-tight leading-[1.08] text-cream drop-shadow-sm">
-                {activeSlide.title}
-              </h1>
-
-              {/* Story Description */}
-              <p className="text-xs sm:text-base text-ivory/90 max-w-xl leading-relaxed font-light pt-1">
-                {activeSlide.subtitle}
-              </p>
-
-              {/* Linked Product Preview Tag if available */}
-              {activeSlide.product && (
-                <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 px-3.5 py-1.5 rounded-brand text-xs text-cream">
-                  <span className="font-medium truncate max-w-[200px]">
-                    {activeSlide.product.title}
-                  </span>
-                  <span className="text-gold font-semibold">
-                    {formatPrice(activeSlide.product.price)}
-                  </span>
-                </div>
+        {isSplitLayout ? (
+          <div className="grid min-h-[680px] grid-cols-1 lg:h-full lg:grid-cols-2">
+            <div className="order-2 flex items-center bg-ivory px-8 py-10 sm:px-14 lg:order-1 lg:px-16">
+              {slideCopy}
+            </div>
+            <div className="relative order-1 min-h-[42vh] overflow-hidden bg-cream sm:min-h-[480px] lg:order-2 lg:min-h-full">
+              {activeSlide.image && (
+                <motion.img
+                  initial={{ scale: 1.06 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 6, ease: 'easeOut' }}
+                  src={activeSlide.image}
+                  alt={activeSlide.title || ''}
+                  className="absolute inset-0 h-full w-full object-cover object-[center_25%]"
+                />
               )}
+            </div>
+          </div>
+        ) : (
+          <>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSlide._id || currentSlideIndex}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+                className="absolute inset-0"
+              >
+                {activeSlide.image && (
+                  <motion.img
+                    initial={{ scale: 1.06 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 6, ease: 'easeOut' }}
+                    src={activeSlide.image}
+                    alt={activeSlide.title || ''}
+                    className="w-full h-full object-cover object-[center_25%] brightness-[0.78]"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-charcoal/85 via-charcoal/20 to-charcoal/10" />
+                <div className="absolute inset-0 bg-gradient-to-r from-charcoal/70 via-charcoal/25 to-transparent" />
+              </motion.div>
+            </AnimatePresence>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-4 pt-3">
-                <Link to={activeSlide.ctaLink || '/shop'}>
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="bg-wine hover:bg-burgundy text-ivory shadow-lg flex items-center gap-2"
-                  >
-                    <span>{activeSlide.ctaText || 'Discover Drape'}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-                <Link to="/shop">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="border-ivory/60 text-ivory hover:bg-ivory hover:text-charcoal backdrop-blur-xs"
-                  >
-                    View All Sarees
-                  </Button>
-                </Link>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[8%] top-1/2 hidden h-[28rem] w-[28rem] -translate-y-1/2 items-center justify-center rounded-full border border-gold/25 text-[22rem] font-serif font-light leading-none text-ivory/[0.07] lg:flex"
+            >
+              V
+            </div>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-4 border border-ivory/15 sm:inset-6 lg:inset-8"
+            />
+
+            <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col justify-end px-8 pb-16 text-ivory sm:justify-center sm:px-16 sm:pb-0">
+              {slideCopy}
+            </div>
+          </>
+        )}
 
         {/* Navigation Controls: Prev / Next */}
         {slideCount > 1 && (
@@ -272,8 +338,6 @@ export default function HomePage() {
             >
               <ChevronRight className="w-5 h-5" />
             </button>
-
-            {/* Slide Indicator Dots */}
             <div className="absolute bottom-6 right-6 sm:right-12 flex items-center space-x-2 z-20 bg-charcoal/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-ivory/15">
               {combinedSlides.map((_, idx) => (
                 <button

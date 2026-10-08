@@ -303,6 +303,39 @@ export const getMe = async (req, res) => {
   }
 };
 
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.userId || req.user?._id;
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.name = req.body.name;
+    if (req.file) {
+      user.avatar = await uploadImage(req.file, "ecommerce/users");
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: publicUser(user),
+    });
+  } catch (error) {
+    console.error("Update Profile Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 export const sendChangePasswordOTP = async (req, res) => {
   try {
     const userId = req.userId || req.user?._id;

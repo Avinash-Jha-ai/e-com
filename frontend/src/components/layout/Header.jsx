@@ -35,9 +35,7 @@ export default function Header() {
     { name: 'Everyday', href: '/shop?collection=everyday' },
   ];
 
-  const headerBgClass = isScrolled
-    ? 'bg-ivory/92 backdrop-blur-md border-b border-sand/40 shadow-subtle text-charcoal'
-    : 'bg-ivory/85 backdrop-blur-md border-b border-sand/30 text-charcoal';
+  const headerBgClass = isScrolled ? 'shadow-subtle' : '';
 
   const avatarInitials = user?.name
     ?.trim()
@@ -57,7 +55,9 @@ export default function Header() {
         <AnnouncementBar />
       </div>
 
-      <div className={`transition-all duration-300 ${headerBgClass} px-4 sm:px-6 lg:px-8 xl:px-12`}>
+      <div
+        className={`bg-ivory border-b border-sand/40 text-charcoal transition-all duration-300 ${headerBgClass} px-4 sm:px-6 lg:px-8 xl:px-12`}
+      >
         <div
           className={`max-w-7xl mx-auto grid grid-cols-12 items-center transition-all duration-300 ${
             isScrolled ? 'h-16' : 'h-20 sm:h-22'

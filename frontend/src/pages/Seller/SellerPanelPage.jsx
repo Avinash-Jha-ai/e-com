@@ -24,12 +24,14 @@ const initialProduct = {
 };
 
 const initialHero = {
-  title: '',
-  subtitle: '',
-  badge: 'Featured Drape',
+  title: 'Tradition, woven for today.',
+  subtitle: 'Discover heirloom handloom sarees made for the moments that matter — timeless Indian craftsmanship, reimagined for the way you live now.',
+  badge: 'Vanya / Modern Heritage',
+  layout: 'split',
+  image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1600&q=90',
   productId: '',
-  ctaText: 'Discover Drape',
-  ctaLink: '',
+  ctaText: 'Explore the collection',
+  ctaLink: '/shop',
   order: '0',
 };
 
@@ -106,8 +108,8 @@ export default function SellerPanelPage() {
 
   const handleCreateHero = async (event) => {
     event.preventDefault();
-    if (!heroImage && !hero.productId) {
-      addToast({ type: 'error', message: 'Select a product or upload a hero image' });
+    if (!heroImage && !hero.productId && !hero.title.trim() && !hero.subtitle.trim()) {
+      addToast({ type: 'error', message: 'Add a hero image, title, or description' });
       return;
     }
 
@@ -248,28 +250,41 @@ export default function SellerPanelPage() {
 
           {showHeroForm && (
             <form onSubmit={handleCreateHero} className="mt-6 space-y-4 border-t border-sand/30 pt-6">
+              <p className="text-xs text-taupe">Create a backend-managed banner with an image beside the text, or use the classic text-over-image style. Replace the starter image URL or upload your own image.</p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input label="Hero Title" value={hero.title} onChange={(event) => setHero((current) => ({ ...current, title: event.target.value }))} required />
+                <Input label="Hero Title" value={hero.title} onChange={(event) => setHero((current) => ({ ...current, title: event.target.value }))} />
                 <Input label="Badge" value={hero.badge} onChange={(event) => setHero((current) => ({ ...current, badge: event.target.value }))} />
               </div>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-charcoal">Banner Layout</span>
+                <select
+                  value={hero.layout}
+                  onChange={(event) => setHero((current) => ({ ...current, layout: event.target.value }))}
+                  className="h-10 w-full rounded-brand border border-sand/60 bg-ivory/40 px-3 text-sm outline-none focus:border-wine"
+                >
+                  <option value="split">Image beside text (no overlay)</option>
+                  <option value="overlay">Text over image</option>
+                </select>
+              </label>
               <label className="block space-y-1.5">
                 <span className="text-xs font-medium text-charcoal">Hero Description</span>
                 <textarea value={hero.subtitle} onChange={(event) => setHero((current) => ({ ...current, subtitle: event.target.value }))} rows="3" className="w-full rounded-brand border border-sand/60 bg-ivory/40 px-3 py-2 text-sm outline-none focus:border-wine" />
               </label>
               <label className="block space-y-1.5">
                 <span className="text-xs font-medium text-charcoal">Linked Product</span>
-                <select value={hero.productId} onChange={(event) => setHero((current) => ({ ...current, productId: event.target.value }))} className="h-10 w-full rounded-brand border border-sand/60 bg-ivory/40 px-3 text-sm outline-none focus:border-wine">
+                <select value={hero.productId} onChange={(event) => setHero((current) => ({ ...current, productId: event.target.value, image: event.target.value ? '' : current.image }))} className="h-10 w-full rounded-brand border border-sand/60 bg-ivory/40 px-3 text-sm outline-none focus:border-wine">
                   <option value="">No linked product</option>
                   {products.map((catalogProduct) => <option key={catalogProduct._id} value={catalogProduct._id}>{catalogProduct.title}</option>)}
                 </select>
-                <span className="block text-[11px] text-taupe">A linked product supplies the banner image when no image is uploaded.</span>
+                <span className="block text-[11px] text-taupe">Optional. A linked product can supply the banner image when no image is uploaded.</span>
               </label>
               <label className="block rounded-brand border border-dashed border-sand bg-cream/30 p-4 text-center">
                 <ImagePlus className="mx-auto h-5 w-5 text-wine" />
                 <span className="mt-2 block text-xs font-medium text-charcoal">Hero Image</span>
-                <span className="mt-1 block text-[11px] text-taupe">Optional when a linked product has an image.</span>
+                <span className="mt-1 block text-[11px] text-taupe">An uploaded image replaces the image URL below.</span>
                 <input type="file" accept="image/*" onChange={(event) => setHeroImage(event.target.files?.[0] || null)} className="mt-3 block w-full text-xs text-taupe file:mr-3 file:rounded-brand file:border-0 file:bg-wine file:px-3 file:py-2 file:text-xs file:font-medium file:text-ivory" />
               </label>
+              <Input label="Hero Image URL" value={hero.image} onChange={(event) => setHero((current) => ({ ...current, image: event.target.value }))} placeholder="https://…" />
               <div className="grid gap-4 sm:grid-cols-3">
                 <Input label="Button Text" value={hero.ctaText} onChange={(event) => setHero((current) => ({ ...current, ctaText: event.target.value }))} />
                 <Input label="Button Link" value={hero.ctaLink} onChange={(event) => setHero((current) => ({ ...current, ctaLink: event.target.value }))} placeholder="/shop" />
@@ -291,10 +306,16 @@ export default function SellerPanelPage() {
               <div className="divide-y divide-sand/30">
                 {heroSlides.map((slide) => (
                   <div key={slide._id} className="flex items-center gap-4 p-4">
-                    <img src={slide.image} alt="" className="h-14 w-20 rounded-brand object-cover" />
+                    {slide.image ? (
+                      <img src={slide.image} alt="" className="h-14 w-20 rounded-brand object-cover" />
+                    ) : (
+                      <span className="flex h-14 w-20 items-center justify-center rounded-brand bg-cream text-wine">
+                        <ImagePlus className="h-5 w-5" />
+                      </span>
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-charcoal">{slide.title}</p>
-                      <p className="mt-1 text-xs text-taupe">{slide.isActive ? 'Active' : 'Inactive'} · Position {slide.order}</p>
+                      <p className="mt-1 text-xs text-taupe">{slide.isActive ? 'Active' : 'Inactive'} · {slide.layout === 'split' ? 'Image beside text' : 'Text over image'} · Position {slide.order}</p>
                     </div>
                     <Button variant="ghost" size="sm" isLoading={deletingHeroId === slide._id} disabled={deletingHeroId !== null} onClick={() => handleDeleteHero(slide._id)} className="flex items-center gap-1 text-wine hover:text-burgundy" aria-label={`Delete ${slide.title}`}>
                       <Trash2 className="h-3.5 w-3.5" />

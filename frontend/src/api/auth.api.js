@@ -31,6 +31,13 @@ export const authApi = {
     return res.data;
   },
 
+  updateProfile: async (formData) => {
+    const res = await api.put('/auth/profile', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
   addAddress: async (addressData) => {
     const res = await api.post('/auth/address', addressData);
     return res.data;

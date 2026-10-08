@@ -25,6 +25,7 @@ const VerifyOtpPage = lazy(() => import('./pages/Auth/VerifyOtpPage'));
 // Account pages
 const AccountLayout = lazy(() => import('./pages/Account/AccountLayout'));
 const AccountOverviewPage = lazy(() => import('./pages/Account/AccountOverviewPage'));
+const ProfilePage = lazy(() => import('./pages/Account/ProfilePage'));
 const OrdersPage = lazy(() => import('./pages/Account/OrdersPage'));
 const OrderDetailPage = lazy(() => import('./pages/Account/OrderDetailPage'));
 const AddressesPage = lazy(() => import('./pages/Account/AddressesPage'));
@@ -132,6 +133,7 @@ export default function App() {
                         }
                       >
                         <Route index element={<AccountOverviewPage />} />
+                        <Route path="profile" element={<ProfilePage />} />
                         <Route path="orders" element={<OrdersPage />} />
                         <Route path="orders/:orderId" element={<OrderDetailPage />} />
                         <Route path="addresses" element={<AddressesPage />} />

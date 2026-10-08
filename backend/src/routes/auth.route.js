@@ -6,6 +6,7 @@ import {
     verifyRegisterOTP,
     login,
     getMe,
+    updateProfile,
     sendChangePasswordOTP,
     changePassword,
     addAddress,
@@ -25,6 +26,7 @@ import {
     changePasswordValidator,
     loginValidator,
     registerValidator,
+    updateProfileValidator,
     verifyRegisterOTPValidator
 } from "../validators/auth.validator.js";
 
@@ -181,6 +183,16 @@ router.get(
     "/me",
     isAuthenticated,
     getMe
+);
+
+// Update the current user's name and optional profile image
+router.put(
+    "/profile",
+    isAuthenticated,
+    upload.single("avatar"),
+    updateProfileValidator,
+    validateRequest,
+    updateProfile
 );
 
 
